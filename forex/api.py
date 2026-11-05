@@ -12,6 +12,8 @@ from .strategies import STRATEGIES
 
 app=FastAPI(title='Trade AI Forex',version='0.2.0')
 app.state.provider=None
+app.state.news_items=None
+app.state.calendar_events=None
 
 def provider():
     if app.state.provider is None:
@@ -105,10 +107,20 @@ def calculate(req:RiskRequest):
                 req.direction,req.account_currency))
 
 @app.get('/api/v1/news')
-def news(): return {'items':[],'provider':None,'data_status':'DATA_UNAVAILABLE','reason':'Forex news source not configured'}
+def news():
+    items=app.state.news_items
+    return {'items':items or [],'provider':'configured-feed' if items is not None else None,
+            'data_status':'OK' if items is not None else 'DATA_UNAVAILABLE',
+            'reason':None if items is not None else 'Forex news source not configured'}
 
 @app.get('/api/v1/calendar')
-def calendar(): return {'events':[],'provider':None,'data_status':'DATA_UNAVAILABLE','reason':'Economic calendar source not configured'}
+def calendar(symbol:Literal['XAUUSD','EURUSD','GBPUSD','USDJPY']|None=None):
+    from .information import filter_events
+    events=app.state.calendar_events
+    return {'events':filter_events(events,symbol) if events is not None else [],
+            'provider':'configured-calendar' if events is not None else None,
+            'data_status':'OK' if events is not None else 'DATA_UNAVAILABLE',
+            'reason':None if events is not None else 'Economic calendar source not configured'}
 
 @app.post('/api/v1/backtests', response_model=BacktestResponse)
 def backtests(req:BacktestRequest):
@@ -150,3 +162,33 @@ def strategy_backtests(req:StrategyBacktestRequest):
     result=call(lambda: strategy_backtest(p.candles(req.symbol,req.timeframe,req.count),
                         req.spread,req.commission,req.slippage,req.holdout,req.seed))
     return {'result':result,'provider':p.name,'data_status':'OK'}
+
+class RiskPolicyRequest(BaseModel):
+    symbol: Literal['XAUUSD','EURUSD','GBPUSD','USDJPY']
+    direction: Literal['BUY','SELL']
+    timeframe: Literal['M5','M15','M30','H1','H4','D1']='M15'
+    entry: float=Field(gt=0)
+    stop_loss: float=Field(gt=0)
+    take_profit_1: float=Field(gt=0)
+    balance: float=Field(gt=0)
+    risk_pct: float=Field(gt=0,le=5)
+    max_spread: float=Field(gt=0)
+    records: list[dict]=Field(default_factory=list,max_length=100)
+
+@app.post('/api/v1/risk/policy')
+def policy_route(req:RiskPolicyRequest):
+    from .policy import assess
+    p=provider();meta=call(lambda:p.metadata(req.symbol));q=call(lambda:p.quote(req.symbol))
+    meta={**meta,'spread':q['ask']-q['bid']}
+    plan=req.model_dump(include={'symbol','direction','timeframe','entry','stop_loss','take_profit_1'})
+    return call(lambda:assess(plan,meta,req.balance,req.risk_pct,req.records,
+        max_spread=req.max_spread,calc_profit=(lambda side,lots,e,s:p.loss_for(req.symbol,side,lots,e,s))
+        if hasattr(p,'loss_for') else None,account_currency=meta.get('account_currency')))
+
+@app.get('/api/v1/alerts/{symbol}')
+def alerts_route(symbol:Literal['XAUUSD','EURUSD','GBPUSD','USDJPY'],timeframe:Literal['M5','M15','M30','H1','H4','D1']='M15'):
+    from .alerts import AlertEngine
+    if not hasattr(app.state,'alert_engine'): app.state.alert_engine=AlertEngine()
+    result=analyze(provider(),symbol,timeframe)
+    return {'events':app.state.alert_engine.evaluate(result),'data_status':result['data_status'],
+            'provider':provider().name}

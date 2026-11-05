@@ -7,3 +7,5 @@ Sinyal: `BUY`, `SELL`, `WAIT`; ayrı `data_status` veri sağlığını belirtir.
 V2 geçişi: Analiz veri yokluğu ve stale durumunda HTTP 503 döner; önceki JSON alanları korunur. `WAIT` yalnızca sağlıklı veriyle kararsız teknik sinyal içindir. Sağlık 200 yanıtı için gerçek MT5 terminal bağlantısı gerekir. Fixture yanıtında `data_status=TEST_ONLY` gösterilir; bu veri canlı fiyat olarak sunulmamalıdır. Backtest sonucu artık tek plan için en fazla bir kapanış içerir. Açık plan `status=OPEN` ve `trades=0` döndürür.
 
 V3: Seans rozetleri için `/sessions/{symbol}`, çoklu tarama için `/scanner`, strateji adları için `/strategies` kullanın. `session.broker.status=UNKNOWN` olduğunda canlı işlem planı sunulmaz. `scanner.errors` her başarısız sembol/zaman çifti için ayrı gösterilmelidir.
+
+V3 risk politikası `/risk/policy` ile çağrılabilir. `records_source=caller_supplied_manual` kaydı gerçekte brokerdan çekilmiş açık pozisyon olarak sunmayın. `/alerts/{symbol}` olayları yalnızca backend uyarılarıdır, push bildirim değildir. Haber/takvim alanları kaynaksızken `DATA_UNAVAILABLE` kalır.

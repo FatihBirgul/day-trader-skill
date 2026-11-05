@@ -9,3 +9,5 @@ V3 seans aşaması: 338 test geçiyor. Dört yeni test Londra DST, Londra/New Yo
 V3 scanner aşaması: 341 test geçti. Scanner kısmi başarısızlık, strateji oyları ve ek API rotaları test edildi.
 
 V3 araştırma aşaması: 346 test geçti. Çoklu işlem, kronolojik giriş, holdout, deterministik bootstrap, istek sınırı ve ters gap kaybı doğrulandı.
+
+V3 bilgi ve risk aşaması: 352 test geçti. RSS ayrıştırma eski News Skill işleviyle, olay filtreleme, uyarı cooldown ve manuel risk politikası test edildi.

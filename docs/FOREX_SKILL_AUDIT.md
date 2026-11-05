@@ -21,3 +21,5 @@ Forex analizi için `forex/` paketi gerekiyor: ortak provider arayüzü, MT5 ya�
 ## V2 yeniden kullanım sınırı
 
 Fiilen çalışan ortak işlevler: `trader-scanner/scan.py:rsi`, `trader-entry/entry.py:closed_bar_breakout`, `trader-exit/exit.py:atr_of`, `trader-timemachine/timemachine.py:first_exit`. Hisse `risk.check` ve `budget.size_trade` Forex işlem nesnesinde çalıştırılmıyor; bu iki modül Forex akışına bağlı değildir. Forex risk ve lot kontrolleri broker metadata ve hesap para birimine bağlı olduğu için ayrı tutuldu. Haber ve uyarı işlevleri de henüz Forex akışında çağrılmıyor.
+
+V3 haber katmanı mevcut `trader-news/news.py:parse_rss` ve `dedupe` işlevlerini gerçekten çalıştırır. Uyarı katmanı hisse `alerts.evaluate` işlevini doğrudan kullanmaz; NYSE ve hisse fiyatı varsayımları nedeniyle Forex olay üretimi ayrıdır.
