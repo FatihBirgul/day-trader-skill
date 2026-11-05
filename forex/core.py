@@ -245,37 +245,32 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
         base['reasons']=[str(exc)]
     return base
 
-def backtest(bars, direction, entry_price, stop, target, spread=0):
-    """Replay one assumed fill at the close of bars[0], then at most one exit."""
-    ep, sl, tp, cost = [finite(v, n) for v,n in ((entry_price,'entry'),(stop,'stop'),(target,'target'),(spread,'spread'))]
-    if direction not in ('BUY','SELL') or not 0 <= cost < abs(ep-sl):
-        raise DataError('invalid backtest parameters')
-    if len(bars) < 2 or len(bars) > 10000:
-        raise DataError('2..10000 candles required')
-    sign = 1 if direction == 'BUY' else -1
-    risk_distance = abs(ep-sl)
-    if (ep-sl)*sign <= 0 or (tp-ep)*sign <= 0:
-        raise DataError('invalid levels')
-    previous_time = None
+def backtest(bars, direction, entry_price, stop, target, spread=0, price_basis='bid'):
+    """Single assumed fill after bars[0]; OHLC and levels share a stated basis."""
+    from .microstructure import executable_prices, exit_on_bar
+    if len(bars)<2 or len(bars)>10000: raise DataError('2..10000 candles required')
+    model=executable_prices(direction,entry_price,stop,target,spread,price_basis)
+    previous_time=None
     for i,bar in enumerate(bars):
-        hi,lo,cl = [finite(bar[k],k) for k in ('high','low','close')]
-        if lo <= 0 or not lo <= cl <= hi:
-            raise DataError('invalid backtest candle')
+        o,h,l,c=[finite(bar[k],k) for k in ('open','high','low','close')]
+        if l<=0 or l>min(o,c) or h<max(o,c): raise DataError('invalid backtest candle')
         if 'time' in bar:
-            t = finite(bar['time'],'time')
-            if previous_time is not None and t <= previous_time:
-                raise DataError('non-monotonic candle time')
-            previous_time=t
-        if i == 0:
-            continue
-        outcome = timemachine.first_exit(hi,lo,sl,tp,direction.lower())
-        if outcome:
-            gross = -1.0 if outcome == 'stop' else abs(tp-ep)/risk_distance
-            net = gross-cost/risk_distance
-            return {'trades':1,'outcomes_r':[net],'result_r':net,'status':outcome.upper(),
+            stamp=finite(bar['time'],'time')
+            if previous_time is not None and stamp<=previous_time: raise DataError('non-monotonic candle time')
+            previous_time=stamp
+        if i==0: continue
+        result=exit_on_bar(model,bar)
+        if result:
+            net=result['net_r']
+            return {'trades':1,'outcomes_r':[net],'result_r':net,'status':result['outcome'].upper(),
                     'exit_time':bar.get('time'),'bars_evaluated':i,'max_drawdown_r':max(0,-net),
-                    'policy':'stop_first','entry_assumption':'filled_at_first_bar_close'}
-    last = finite(bars[-1]['close'],'close')
-    return {'trades':0,'outcomes_r':[],'result_r':(last-ep)*sign/risk_distance-cost/risk_distance,
-            'status':'OPEN','exit_time':None,'bars_evaluated':len(bars)-1,
-            'max_drawdown_r':None,'policy':'stop_first','entry_assumption':'filled_at_first_bar_close'}
+                    'policy':'stop_first','entry_assumption':'filled_after_first_bar_close',
+                    'price_basis':price_basis,'spread_assumption':spread}
+    last=finite(bars[-1]['close'],'close')
+    bid_last=last-(spread/2 if price_basis=='mid' else 0)
+    exit_mark=bid_last if direction=='BUY' else bid_last+spread
+    net=(exit_mark-model['entry'])*(1 if direction=='BUY' else -1)/model['risk']
+    return {'trades':0,'outcomes_r':[],'result_r':net,'status':'OPEN','exit_time':None,
+            'bars_evaluated':len(bars)-1,'max_drawdown_r':None,'policy':'stop_first',
+            'entry_assumption':'filled_after_first_bar_close','price_basis':price_basis,
+            'spread_assumption':spread}

@@ -9,3 +9,5 @@ V3 araştırma backtest'i `forex/research.py` içinde çoklu bağımsız işlem 
 V3 strateji karşılaştırması, bir işlemin sinyalinde bulunan strateji etiketlerine göre metrikleri gruplar. Aynı işlem birden fazla etikette sayılabilir; sonuçlar bağımsız strateji portföyleri değildir. Parametrelerin kayan pencerelerde yeniden seçildiği gerçek walk-forward hâlâ uygulanmadı.
 
 V3 sabit kural kayan değerlendirmesi `walk_forward` ile 2..5 ardışık pencere üretir. Her pencerenin eğitim bitişi test başlangıcından öncedir ve veri o pencerenin sonuna kadar kesilir. Parametre seçimi veya yeniden eğitim yapılmaz; bu tam strateji optimizasyonu walk-forward değildir. Gelecek mumlar geçmiş işlem sonuçlarını değiştirmemelidir; test bunu doğrular.
+
+V4 fiyat modeli: OHLC ve grafik seviyeleri aynı `price_basis` (`bid` veya `mid`) taşır. Varsayılan `bid` MT5 geçmiş mumları içindir. Sabit spread kullanılır; tarihsel dinamik spread henüz yok. BUY/SELL uygulanabilir giriş ve çıkış fiyatları ortak `microstructure` hesabından gelir. Gerçek tick sırası, fill, likidite ve kısmi gerçekleşme doğrulanmadı.

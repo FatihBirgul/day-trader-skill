@@ -61,6 +61,7 @@ class RiskRequest(BaseModel):
     account_currency: str
 
 class BacktestRequest(BaseModel):
+    price_basis: Literal['bid','mid']='bid'
     symbol: Literal['XAUUSD','EURUSD','GBPUSD','USDJPY']
     timeframe: Literal['M5','M15','M30','H1','H4','D1']='M15'
     direction: Literal['BUY','SELL']
@@ -125,7 +126,7 @@ def calendar(symbol:Literal['XAUUSD','EURUSD','GBPUSD','USDJPY']|None=None):
 @app.post('/api/v1/backtests', response_model=BacktestResponse)
 def backtests(req:BacktestRequest):
     return call(lambda: {'result':backtest(provider().candles(req.symbol,req.timeframe,req.count),req.direction,
-                req.entry,req.stop_loss,req.take_profit,req.spread),'provider':provider().name,'data_status':'OK'})
+                req.entry,req.stop_loss,req.take_profit,req.spread,req.price_basis),'provider':provider().name,'data_status':'OK'})
 
 @app.get('/api/v1/sessions/{symbol}')
 def sessions(symbol:Literal['XAUUSD','EURUSD','GBPUSD','USDJPY']):
@@ -146,6 +147,7 @@ def scanner_route(symbols:str='XAUUSD',timeframes:str='M15'):
     return scan(provider(),syms,tfs)
 
 class StrategyBacktestRequest(BaseModel):
+    price_basis: Literal['bid','mid']='bid'
     symbol: Literal['XAUUSD','EURUSD','GBPUSD','USDJPY']
     timeframe: Literal['M5','M15','M30','H1','H4','D1']='M15'
     count: int=Field(ge=220,le=2000)
@@ -160,7 +162,7 @@ def strategy_backtests(req:StrategyBacktestRequest):
     from .research import strategy_backtest
     p=provider()
     result=call(lambda: strategy_backtest(p.candles(req.symbol,req.timeframe,req.count),
-                        req.spread,req.commission,req.slippage,req.holdout,req.seed))
+                        req.spread,req.commission,req.slippage,req.holdout,req.seed,req.price_basis))
     return {'result':result,'provider':p.name,'data_status':'OK'}
 
 class RiskPolicyRequest(BaseModel):
@@ -203,5 +205,5 @@ def walk_forward_route(req:WalkForwardRequest):
     p=provider()
     result=call(lambda:walk_forward(p.candles(req.symbol,req.timeframe,req.count),
         req.spread,folds=req.folds,commission=req.commission,slippage=req.slippage,
-        holdout=req.holdout,seed=req.seed))
+        holdout=req.holdout,seed=req.seed,price_basis=req.price_basis))
     return {'result':result,'provider':p.name,'data_status':'OK'}

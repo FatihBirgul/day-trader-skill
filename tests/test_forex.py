@@ -52,8 +52,8 @@ class Forex(unittest.TestCase):
         self.assertEqual(risk_check({'direction':'SELL','entry':2,'stop_loss':2.1,'take_profit_1':1.8},
                          {**META,'spread':.01},.05)['decision'],'PASS')
     def test_stop_first_backtest(self):
-        data=[{'high':1,'low':1,'close':1},{'high':3,'low':.2,'close':1}]
-        self.assertLess(backtest(data,'BUY',1,.5,2,.01)['outcomes_r'][0],-1)
+        data=[{'open':1,'high':1,'low':1,'close':1},{'open':1,'high':3,'low':.2,'close':1}]
+        self.assertEqual(backtest(data,'BUY',1,.5,2,.01)['outcomes_r'][0],-1)
 
 if __name__=='__main__': unittest.main()
 
@@ -124,27 +124,28 @@ class MoreForex(unittest.TestCase):
 
 class FinancialSafety(unittest.TestCase):
     def test_single_trade_closes_once(self):
-        rows=[{'high':1,'low':1,'close':1},{'high':2.1,'low':.8,'close':2},
-              {'high':2.2,'low':.2,'close':.3}]
+        rows=[{'open':1,'high':1,'low':1,'close':1},{'open':1,'high':2.1,'low':.8,'close':2},
+              {'open':2,'high':2.2,'low':.2,'close':.3}]
         r=backtest(rows,'BUY',1,.5,2,.01)
         self.assertEqual((r['trades'],r['status'],len(r['outcomes_r'])),(1,'TARGET',1))
         self.assertEqual(r['bars_evaluated'],1)
     def test_stop_first_and_open(self):
-        rows=[{'high':1,'low':1,'close':1},{'high':2.1,'low':.4,'close':1}]
+        rows=[{'open':1,'high':1,'low':1,'close':1},{'open':1,'high':2.1,'low':.4,'close':1}]
         self.assertEqual(backtest(rows,'BUY',1,.5,2)['status'],'STOP')
-        self.assertEqual(backtest([rows[0],{'high':1.2,'low':.8,'close':1.1}],
+        self.assertEqual(backtest([rows[0],{'open':1,'high':1.2,'low':.8,'close':1.1}],
                                   'BUY',1,.5,2)['status'],'OPEN')
     def test_sell_exit_and_cost(self):
-        rows=[{'high':2,'low':2,'close':2},{'high':2.2,'low':.9,'close':1}]
+        rows=[{'open':2,'high':2,'low':2,'close':2},{'open':2,'high':2.2,'low':.9,'close':1}]
         a=backtest(rows,'SELL',2,2.5,1,0)
         b=backtest(rows,'SELL',2,2.5,1,.1)
         self.assertEqual(a['status'],'TARGET')
-        self.assertAlmostEqual(a['result_r']-b['result_r'],.2)
+        self.assertAlmostEqual(a['result_r'],2)
+        self.assertAlmostEqual(b['result_r'],1.5)
         rows[1]['high']=2.6
         self.assertEqual(backtest(rows,'SELL',2,2.5,1)['status'],'STOP')
     def test_time_order_rejected(self):
-        rows=[{'time':2,'high':1,'low':1,'close':1},
-              {'time':1,'high':2,'low':.8,'close':1.1}]
+        rows=[{'time':2,'open':1,'high':1,'low':1,'close':1},
+              {'time':1,'open':1,'high':2,'low':.8,'close':1.1}]
         with self.assertRaises(DataError): backtest(rows,'BUY',1,.5,2)
     def test_broker_profit_sign_and_grid(self):
         meta={**META,'volume_min':.03,'volume_step':.02,'volume_max':.11,

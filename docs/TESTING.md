@@ -23,3 +23,5 @@ V3 MT5 tanılama aşaması: 358 test geçti. Tanılama mock provider ile test ed
 V3 strateji etiket karşılaştırması sonrası 359 test geçti.
 
 V3 kayan değerlendirme: 361 test geçti. Gelecekte eklenen mumların geçmiş işlem sonuçlarını değiştirmemesi ve ardışık pencere sınırları doğrulandı.
+
+V4 ilk kalite kapısı: 368 test geçti. Fiyat modeli, bid/mid, iki yön, stop-first ve gap; ayrıca broker gece yarısı, pazar ve tarih istisnası test edildi.
