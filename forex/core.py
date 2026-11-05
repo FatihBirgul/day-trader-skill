@@ -50,11 +50,10 @@ def ema(values, n):
 def atr(bars, n=14):
     if len(bars) < n + 1:
         return None
-    tr = [max(b['high']-b['low'], abs(b['high']-bars[i-1]['close']), abs(b['low']-bars[i-1]['close'])) for i,b in enumerate(bars) if i]
-    result = sum(tr[:n]) / n
-    for v in tr[n:]:
-        result = (result * (n-1) + v) / n
-    return result
+    # Reuse the exit skill's true-range calculation on broker OHLC.
+    converted = [{'h': b['high'], 'l': b['low'], 'c': b['close']} for b in bars]
+    value, count = exit_planner.atr_of(converted, n)
+    return value if count == n else None
 
 def indicators(bars):
     closes = [b['close'] for b in bars]
