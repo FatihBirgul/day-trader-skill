@@ -42,6 +42,7 @@ class AnalysisResponse(BaseModel):
     strategies: list[dict] | None = None
     session: dict | None = None
     confirmations: list[dict] | None = None
+    market_structure: dict | None = None
 
 class BacktestResponse(BaseModel):
     result: dict

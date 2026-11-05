@@ -233,6 +233,8 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
         from .strategies import candidates, resolve
         votes=candidates(bars,a)
         decision,why=resolve(votes,higher)
+        from .structure import market_structure
+        base['market_structure']=market_structure(bars)
         base['indicators']=a
         base['strategies']=votes
         base['reasons']=[f'trend={trend}',f'confirmations={higher}']+why

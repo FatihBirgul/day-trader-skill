@@ -33,3 +33,5 @@ V4 risk sınırı aşaması: 370 test geçti. Negatif manuel kayıt ve spread so
 V4 provider aşaması: 373 test geçti. Kütüphane hatası, fixture veri yalıtımı ve paralel quote serileştirmesi test edildi.
 
 V4 as-of aşaması: 375 test geçti. Gelecekteki H4 mumunun atılması, çoklu onay ve daha düşük zaman dilimi reddi test edildi.
+
+V4 piyasa yapısı aşaması: 378 test geçti. Pivot sağ mum onayı, gelecekteki pivotun görünmemesi ve zaman sırası doğrulandı.

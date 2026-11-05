@@ -45,3 +45,5 @@ V4 geriye uyumlu ek alan: `/backtests`, `/strategy-backtests` ve `/walk-forward`
 V4 karşılaştırma gövdesi: `strategy_comparison.{trend_following|breakout|pullback}` artık her stratejinin bağımsız `metrics` ve `trades` alanını içerir. Önceki sürümde alt alan doğrudan metrikti; PWA `strategy_comparison[name].metrics` yoluna geçmelidir.
 
 V4 zaman hizalaması: `/analysis/{symbol}` ve `/signals/{symbol}` `confirmations=H1,H4` sorgusu alabilir. Her üst zaman dilimi mumu birincil son kapanıştan önce kapanmış olmalıdır. Yanıtta `confirmations` öğeleri `timeframe`, `direction` ve Unix saniye `closed_at` alanlarını taşır; `strategies` ve `session` alanları da pozitif yanıtta korunur. Geçersiz veya daha düşük onay zaman dilimi veri durumu hatası döndürür.
+
+V4 `market_structure` alanı analysis ve scanner sonuçlarında bulunabilir: `trend`, `support`, `resistance`, `break_of_structure`, `change_of_character`, son onaylı swing zamanları ve sayıları içerir. Swing yalnızca sağdaki mumlar kapandıktan sonra görünür.

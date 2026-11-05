@@ -15,7 +15,8 @@ def scan(provider, symbols=SYMBOLS, timeframes=('M15',), now=None, limit=24):
             results.append({'symbol':symbol,'timeframe':tf,'signal':result['signal'],
                             'data_status':result['data_status'],'reasons':result['reasons'],
                             'session':result.get('session'),'indicators':result.get('indicators'),
-                            'strategies':result.get('strategies',[])})
+                            'strategies':result.get('strategies',[]),
+                            'market_structure':result.get('market_structure')})
         except Exception as exc:
             errors.append({'symbol':symbol,'timeframe':tf,'reason':str(exc)})
     results.sort(key=lambda r:(r['data_status']!='OK',r['signal']=='WAIT',r['symbol'],r['timeframe']))
