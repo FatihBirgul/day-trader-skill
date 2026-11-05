@@ -43,7 +43,8 @@ Test sonuçları ilgili geliştirme adımında gerçekten çalıştırılan hede
 | 3f1637d / M8 | macro.py, test_macro.py, macro sözleşmesi | `unittest discover -s tests -p test_macro.py -v`:4/4 | DECLARED_SOURCE doğrulanmış kapsama değildir |
 | 64f9032 / M4,M5,M9 | unified.py, api.py, contracts.py, test_unified.py, API/handoff belgeleri | API/çatışma/finansal/unavailable hedefleri; son423'lük kapıda geçti | Tam dört aile Forex entegrasyonu BLOCKED |
 | 355478e / M10 | read-only güvenlik testi, public sentetik API örnekleri, güvenlik/sonraki işler | Son public423/423 iki sürüm; özel entegrasyon5/5 iki sürüm; CI iki iş başarılı | Gerçek piyasa/Windows testi yok |
-| Rapor commit'i | Bu rapor ve doğrulama özeti | Önceki aynı kodun CI kanıtı aşağıda; son commit CI sonucu PR kontrollerinden ayrıca doğrulanır | Kod değişikliği yok |
+| c32716a / rapor | Bu rapor ve doğrulama özeti | Actions42132478556 iki Python işinde423/423 ve doğru SHA ile SUCCESS | Kod değişikliği yok |
+| Son efor belgesi commit'i | Bu rapor ve NEXT_ACTIONS efor toplamı | 19-43 mühendis-günü ile hafta tahmini tutarlı hale getirildi; son commit CI sonucu PR kontrollerinden ayrıca doğrulanır | Kod değişikliği yok |
 
 ## C. Code reuse
 
@@ -81,4 +82,4 @@ Tam özel birleşme için yetkili yazılabilir özel hedef yok; yeni private rep
 
 ## I. Estimated remaining development
 
-Detaylı paketler UNIFIED_NEXT_ACTIONS.md içinde. Özel hedef/izin ve veri bağımlılıkları çözüldükten sonra en iyi koşulda2-3 mühendis-haftası; tek mühendis için gerçekçi tahmin4-8 hafta. Bunlar doğrulanmamış mühendislik tahminleri; erişim bekleme ve forward-market gözlemi hariç. En büyük belirsizlikler kaynak lisansı, broker/CFD varyantları, takvim doğruluğu ve gerçek strateji edge'idir. Tahmin kârlılık garantisi değildir.
+Detaylı paketler UNIFIED_NEXT_ACTIONS.md içinde: toplam19-43 mühendis-günü. Özel hedef/izin ve veri bağımlılıkları çözüldükten sonra en iyi koşulda yaklaşık4 mühendis-haftası; tek mühendis için gerçekçi tahmin5-9 hafta. Bunlar doğrulanmamış mühendislik tahminleri; erişim bekleme ve forward-market gözlemi hariç. En büyük belirsizlikler kaynak lisansı, broker/CFD varyantları, takvim doğruluğu ve gerçek strateji edge'idir. Tahmin kârlılık garantisi değildir.
