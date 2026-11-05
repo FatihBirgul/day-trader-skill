@@ -28,6 +28,10 @@ class MT5Provider:
             except json.JSONDecodeError: raise DataError('MT5_SYMBOL_MAP must be JSON')
             if not isinstance(mappings,dict) or any(k not in SYMBOLS or not isinstance(v,str) for k,v in mappings.items()):
                 raise DataError('invalid MT5_SYMBOL_MAP')
+        raw_hours=os.environ.get('MT5_BROKER_HOURS','{}')
+        try: self.hours=json.loads(raw_hours)
+        except json.JSONDecodeError: raise DataError('MT5_BROKER_HOURS must be JSON')
+        if not isinstance(self.hours,dict): raise DataError('invalid MT5_BROKER_HOURS')
         self.mt5=mt5; self.lock=threading.RLock(); self.mappings=mappings
         self.connected=False
     def connect(self):
@@ -75,6 +79,7 @@ class MT5Provider:
                     'point':i.point,'volume_min':i.volume_min,'volume_max':i.volume_max,
                     'volume_step':i.volume_step,'stops_level':i.trade_stops_level,
                     'trade_allowed':bool(getattr(i,'trade_mode',1)) and bool(getattr(account,'trade_allowed',True)),
+                    'broker_hours':self.hours.get(symbol),
                     'account_currency':getattr(account,'currency',None),
                     'tick_value_currency':getattr(account,'currency',None) if account else None}
     def quote(self,symbol):

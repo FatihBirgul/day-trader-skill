@@ -9,3 +9,5 @@ H4 ve seçilen zaman diliminde 200 kapanmış mum gerekir. Fiyat için 120 saniy
 ## V2 veri güvenliği
 
 MT5 alias eşlemesi yalnızca `MT5_SYMBOL_MAP` içinde açıkça belirtilmiş broker adıyla yapılır. Terminal bağlantısı sağlık isteğinde sınanır; kopuk bağlantıda tekrar başlatma denenir. Metadata, quote ve kapanmış OHLC denetlenir. Sinyal planı, işlem izni kapalıysa veya H4 mumları eskiyse üretilmez. Brokerın tatil ve özel işlem saatleri için ayrıca takvim API'si yoktur; taze tick ve işlem izni gerekli ama tek başına tam seans doğrulaması değildir.
+
+V3 seans katmanı `forex/sessions.py` içindedir. Broker saati bilinmediğinde `UNKNOWN` sonucu analiz planını durdurur. Global seanslar yalnızca açıklayıcıdır.

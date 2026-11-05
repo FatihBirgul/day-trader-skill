@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 from datetime import datetime, timezone
 from decimal import Decimal, ROUND_FLOOR
+from .sessions import session_snapshot
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -162,7 +163,10 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
         meta=provider.metadata(symbol)
         quote=provider.quote(symbol)
         if not meta or not quote: raise DataError('quote or metadata unavailable')
-        if meta.get('trade_allowed') is False: raise DataError('market or account trading disabled')
+        session=session_snapshot(datetime.fromtimestamp(now,timezone.utc), symbol, meta.get('trade_allowed'), meta.get('broker_hours'))
+        base['session']=session
+        if session['broker']['status'] not in ('OPEN','CLOSING_SOON'):
+            raise DataError('broker market '+session['broker']['status'].lower())
         bid,ask=finite(quote.get('bid'),'bid'),finite(quote.get('ask'),'ask')
         qt=finite(quote.get('time'),'tick time')
         if bid <= 0 or ask <= bid: raise DataError('invalid bid/ask')

@@ -7,7 +7,7 @@ from forex.api import app
 NOW=1800000000
 META={'contract_size':100,'tick_size':0.01,'tick_value':1,'tick_value_currency':'USD','point':0.01,
       'volume_step':0.01,'volume_min':0.01,'volume_max':10,'stops_level':10,
-      'account_currency':'USD','max_spread':1}
+      'account_currency':'USD','max_spread':1,'broker_hours':{'timezone':'UTC','weekly':{str(i):[['00:00','24:00']] for i in range(7)}}}
 
 def bars(tf):
     seconds={'M15':900,'H4':14400}[tf]
