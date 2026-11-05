@@ -72,11 +72,24 @@ def indicators(bars):
     signal = ema(macd_series,9)
     mid = sum(closes[-20:])/20
     std = (sum((x-mid)**2 for x in closes[-20:])/20)**.5
-    return {'ema20':ema(closes,20),'ema50':ema(closes,50),'ema200':ema(closes,200),
-            'rsi14':scanner.rsi(closes), 'atr14':atr(bars), 'macd':macd_line,
-            'macd_signal':signal, 'bollinger_upper':mid+2*std,'bollinger_lower':mid-2*std,
-            'swing_high':max(b['high'] for b in bars[-21:-1]),
-            'swing_low':min(b['low'] for b in bars[-21:-1])}
+    previous_signal=ema(macd_series[:-1],9)
+    previous_hist=macd_series[-2]-previous_signal
+    histogram=macd_line-signal
+    sma20=mid;sma50=sum(closes[-50:])/50
+    high=max(b['high'] for b in bars[-21:-1]);low=min(b['low'] for b in bars[-21:-1])
+    previous_high=max(b['high'] for b in bars[-41:-21]);previous_low=min(b['low'] for b in bars[-41:-21])
+    return {'ema9':ema(closes,9),'ema20':ema(closes,20),'ema50':ema(closes,50),
+            'ema100':ema(closes,100),'ema200':ema(closes,200),'sma20':sma20,'sma50':sma50,
+            'rsi14':scanner.rsi(closes),'atr14':atr(bars),'normalized_atr':atr(bars)/closes[-1],
+            'macd':macd_line,'macd_signal':signal,'macd_histogram':histogram,
+            'momentum_change':histogram-previous_hist,
+            'bollinger_upper':mid+2*std,'bollinger_lower':mid-2*std,
+            'bollinger_width':4*std/mid if mid>0 else None,
+            'swing_high':high,'swing_low':low,
+            'higher_high':high>previous_high,'higher_low':low>previous_low,
+            'lower_high':high<previous_high,'lower_low':low<previous_low,
+            'ema20_slope':ema(closes,20)-ema(closes[:-1],20),
+            'price_ema20_distance':(closes[-1]-ema(closes,20))/closes[-1]}
 
 def validate_bars(bars, tf, now):
     if tf not in TIMEFRAMES:

@@ -492,7 +492,7 @@ def rsi(closes, n=14):
     for i in range(n, len(g)):
         ag = (ag * (n - 1) + g[i]) / n
         al = (al * (n - 1) + lo[i]) / n
-    return 100 - 100 / (1 + ag / al) if al else 100.0
+    return 50.0 if not ag and not al else 100 - 100 / (1 + ag / al) if al else 100.0
 
 
 def daily_closes(series, now_utc):
