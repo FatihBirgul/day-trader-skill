@@ -192,3 +192,16 @@ def alerts_route(symbol:Literal['XAUUSD','EURUSD','GBPUSD','USDJPY'],timeframe:L
     result=analyze(provider(),symbol,timeframe)
     return {'events':app.state.alert_engine.evaluate(result),'data_status':result['data_status'],
             'provider':provider().name}
+
+class WalkForwardRequest(StrategyBacktestRequest):
+    count: int=Field(ge=260,le=2000)
+    folds: int=Field(ge=2,le=5,default=3)
+
+@app.post('/api/v1/walk-forward')
+def walk_forward_route(req:WalkForwardRequest):
+    from .research import walk_forward
+    p=provider()
+    result=call(lambda:walk_forward(p.candles(req.symbol,req.timeframe,req.count),
+        req.spread,folds=req.folds,commission=req.commission,slippage=req.slippage,
+        holdout=req.holdout,seed=req.seed))
+    return {'result':result,'provider':p.name,'data_status':'OK'}

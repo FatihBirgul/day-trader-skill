@@ -35,8 +35,7 @@ def strategy_backtest(bars, spread, commission=0, slippage=0, holdout=0.25, seed
             if risk<=0: continue
             position={'direction':direction,'entry':entry,'stop':entry-sign*risk,
                       'target':entry+sign*2*risk,'entry_time':bar['time'],
-                      'entry_index':i,'strategy':[v['strategy'] for v in votes],
-                      'split':'holdout' if i>=split else 'development'}
+                      'entry_index':i,'strategy':[v['strategy'] for v in votes]}
         exposure+=1
         side=position['direction'].lower()
         hit=timemachine.first_exit(bar['high'],bar['low'],position['stop'],position['target'],side)
@@ -54,8 +53,8 @@ def strategy_backtest(bars, spread, commission=0, slippage=0, holdout=0.25, seed
                        'r':net,'holding_bars':i-position['entry_index']+1})
         position=None
     return {'trades':trades,'open_position':position,'metrics':_metrics(trades,exposure,n-200),
-            'development':_metrics([t for t in trades if t['split']=='development'],0,0),
-            'holdout':_metrics([t for t in trades if t['split']=='holdout'],0,0),
+            'development':_metrics([t for t in trades if t['entry_index']<split],0,0),
+            'holdout':_metrics([t for t in trades if t['entry_index']>=split],0,0),
             'holdout_start_time':bars[split]['time'],
             'strategy_comparison':{name:_metrics([t for t in trades if name in t['strategy']],0,0)
                                    for name in ('trend_following','breakout','pullback')},
@@ -85,3 +84,20 @@ def _bootstrap(trades,seed,draws=200):
     rng=random.Random(seed)
     totals=sorted(sum(rng.choice(rs) for _ in rs) for _ in range(draws))
     return {'draws':draws,'seed':seed,'median_total_r':totals[draws//2]}
+
+def walk_forward(bars, spread, folds=3, **kwargs):
+    """Fixed-rule rolling evaluation; no parameter fitting or optimization."""
+    if not 2<=folds<=5 or len(bars)<220+folds*20:
+        raise DataError('insufficient candles for 2..5 rolling folds')
+    span=(len(bars)-220)//folds
+    windows=[]
+    for fold in range(folds):
+        start=220+fold*span
+        end=220+(fold+1)*span if fold<folds-1 else len(bars)
+        result=strategy_backtest(bars[:end],spread,**kwargs)
+        trades=[t for t in result['trades'] if start<=t['entry_index']<end]
+        windows.append({'fold':fold+1,'train_end_index':start-1,'test_start_index':start,
+                        'test_end_index':end-1,'metrics':_metrics(trades,0,0),
+                        'trades':trades})
+    return {'folds':windows,'method':'fixed_rules_rolling_evaluation',
+            'warning':'No parameter fitting; not proof of out-of-sample edge'}

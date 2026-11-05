@@ -54,3 +54,17 @@ class StrategyComparison(unittest.TestCase):
         result=strategy_backtest(series(),.02)
         for name,metrics in result['strategy_comparison'].items():
             self.assertEqual(metrics['trade_count'],sum(name in t['strategy'] for t in result['trades']))
+
+class RollingEvaluation(unittest.TestCase):
+    def test_chronological_windows(self):
+        from forex.research import walk_forward
+        result=walk_forward(series(300),.02,folds=2)
+        self.assertEqual(len(result['folds']),2)
+        for fold in result['folds']:
+            self.assertLess(fold['train_end_index'],fold['test_start_index'])
+            self.assertTrue(all(fold['test_start_index']<=t['entry_index']<=fold['test_end_index']
+                                for t in fold['trades']))
+    def test_future_candles_do_not_change_past_trades(self):
+        short=strategy_backtest(series(260),.02)['trades']
+        long=strategy_backtest(series(300),.02)['trades']
+        self.assertEqual(short,[t for t in long if t['exit_index']<260])

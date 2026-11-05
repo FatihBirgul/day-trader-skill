@@ -37,3 +37,5 @@ V3 yeni rotalar: `POST /api/v1/risk/policy` plan ve manuel günlük kayıtlarla 
 V3 MT5 yapılandırması: `/symbols/{symbol}/metadata` artık `asset_type`, `source`, `digits`, `freeze_level`, `max_spread`, `broker_hours` gibi alanları döndürebilir. `max_spread` ve broker saat politikası eksikse `/analysis` plan üretmez. `/quotes` `spread`, `provider`, `freshness` alanlarını içerir. Bu alanlar brokerdan doğrulanan veriyle doldurulur; fixture sonuçları canlı gösterilmemelidir.
 
 `/strategy-backtests` yanıtı ayrıca `strategy_comparison` döndürür. Etiketler örtüşebilir; alt grup işlem sayıları toplamının genel işlem sayısına eşit olması beklenmez.
+
+`POST /api/v1/walk-forward` araştırma backtest gövdesine ek `folds` (2..5) alır, `count` 260..2000 olmalıdır. `result.method=fixed_rules_rolling_evaluation`; her fold eğitim bitişi, test aralığı, işlemler ve metrikleri içerir. Parametre optimizasyonu olmadığı açıkça belirtilir.

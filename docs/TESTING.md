@@ -21,3 +21,5 @@ V3 son yerel doğrulama: 357 test geçti, 0 başarısız ve 0 atlanan. Gösterge
 V3 MT5 tanılama aşaması: 358 test geçti. Tanılama mock provider ile test edildi; Cloud'da gerçek MT5 paketi olmadığından canlı test yapılmadı.
 
 V3 strateji etiket karşılaştırması sonrası 359 test geçti.
+
+V3 kayan değerlendirme: 361 test geçti. Gelecekte eklenen mumların geçmiş işlem sonuçlarını değiştirmemesi ve ardışık pencere sınırları doğrulandı.
