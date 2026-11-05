@@ -1,0 +1,11 @@
+# Security and source boundary review
+
+Only public-safe source, generic contracts, independently authored validation and synthetic public-core fixtures are included here. The private repository was read in a separate restricted workspace. Its code, confidential inventory, original test logs and bridge are outside this Git tree. No private repository was created and no repository visibility was changed.
+
+Actual checks: no 20-nonempty-line normalized source window in the public Forex package matched the private engine source; no tracked/untracked private source changes; no private imports in public Forex modules; AST regressions reject broker order methods and hidden network/storage dependencies in deterministic modules. The window check is supplementary evidence, not proof that all intellectual-property risks can be detected mechanically. Public CI installs only public API dependencies and never requires private source or credentials.
+
+Private adapter failures are reduced to a generic unavailable reason; private exception strings are not returned to clients. Responses verify ABI/source SHA/snapshot binding and bounded, finite, allowlisted payloads. Package source SHA is a deployment declaration, not authentication; a trusted, access-controlled deployment must verify its actual private package separately. Snapshot hashes bind content but do not certify provider truth or licensing.
+
+No order/demo order, order_send, private product/auto-paper service, production database, frontend, protected branch mutation, main merge, force push, backup deletion or external message delivery is part of this implementation. Existing stock modules remain preserved outside the new execution-free Forex path. Optional risk calculation can call read-only order_calc_profit only. Real MT5 Windows/account validation remains UNVERIFIED.
+
+The new API does not add authentication, HTTPS, public-network exposure or always-on service setup. It should retain the existing local/controlled deployment assumptions. Missing live prices, macro sources or private features stay explicit rather than generating substitutes. Deployment and a source-license-reviewed writable private integration target remain separate tasks.

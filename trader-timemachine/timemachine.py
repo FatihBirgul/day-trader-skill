@@ -346,6 +346,13 @@ def pct(a, q):
     return a[min(len(a) - 1, int(q * len(a)))]
 
 
+def first_exit(high, low, stop, target, side="buy"):
+    """Resolve ambiguous candles conservatively: stop wins a same-bar collision."""
+    if side == "buy":
+        return "stop" if low <= stop else "target" if high >= target else None
+    return "stop" if high >= stop else "target" if low <= target else None
+
+
 def simulate(pool, entry, stop, target, k, last, replays=10000, seed=19, window=2, side="buy"):
     """Monte Carlo replays of bars k+1..last. Same draws and order as the reel's sim.py."""
     long = side == "buy"
@@ -367,16 +374,7 @@ def simulate(pool, entry, stop, target, k, last, replays=10000, seed=19, window=
             o, h, l, c = choice(pool[slot(rng, i)])
             hi, lo, cl = p * h, p * l, p * c
             if outcome is None:
-                if long:
-                    if lo <= stop:
-                        outcome = "stop"        # both inside one bar: count the loss (conservative)
-                    elif hi >= target:
-                        outcome = "target"
-                else:
-                    if hi >= stop:
-                        outcome = "stop"
-                    elif lo <= target:
-                        outcome = "target"
+                outcome = first_exit(hi, lo, stop, target, side)
             p = cl
             if keep:
                 path.append(round(p, 2))
