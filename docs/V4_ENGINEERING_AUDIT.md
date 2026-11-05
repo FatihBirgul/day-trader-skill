@@ -10,3 +10,5 @@ Başlangıç: `06b9ac2`, 361 test başarılı. Çalışma branch'i `codex/forex-
 | Orta | `forex/api.py` | API girdi fiyat temeli belirsizdi. | Frontend yanlış spread hesabı yapabilir. | `price_basis` alanı eklendi; eski isteklerin varsayılanı `bid` olarak belgelendi. |
 
 Açık denetim konuları: gerçek MT5 Windows terminal testi, broker bazlı tick value doğrulaması, bağımsız strateji backtest'i, tam parametre ayarlamalı walk-forward, canlı haber/takvim kaynağı ve genel ağa açık API güvenliği.
+| Yüksek | `forex/core.py:risk_check` | Broker minimum stop seviyesi entry-stop farkıyla karşılaştırılıyordu; spread, çıkış tarafındaki mesafeyi azaltır. | Brokerın reddedeceği stop geçerli sanılabilir. | Stop mesafesinden spread düşülür; BUY/SELL sınır testleri. |
+| Yüksek | `forex/policy.py` | Negatif manuel planlanan risk kaydı günlük toplamı azaltabiliyordu. | Günlük risk sınırı aşılabilir. | Negatif ve sonlu olmayan kayıtlar reddedildi; regresyon testi. |

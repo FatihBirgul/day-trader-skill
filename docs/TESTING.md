@@ -27,3 +27,5 @@ V3 kayan değerlendirme: 361 test geçti. Gelecekte eklenen mumların geçmiş i
 V4 ilk kalite kapısı: 368 test geçti. Fiyat modeli, bid/mid, iki yön, stop-first ve gap; ayrıca broker gece yarısı, pazar ve tarih istisnası test edildi.
 
 V4 bağımsız strateji tekrar oynatma sonrası 368 test geçti. `strategy_comparison` her strateji için kendi işlem listesi ve metriklerini doğrular.
+
+V4 risk sınırı aşaması: 370 test geçti. Negatif manuel kayıt ve spread sonrası broker stop mesafesi regresyonları eklendi.

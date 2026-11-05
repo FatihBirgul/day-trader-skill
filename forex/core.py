@@ -171,8 +171,9 @@ def risk_check(plan, meta, max_spread, min_rr=1.5, max_open_positions=1, open_po
         sign = 1 if plan['direction']=='BUY' else -1
         if (e-s)*sign <= 0 or (t-e)*sign <= 0: reasons.append('invalid stop or target side')
         elif (t-e)*sign/((e-s)*sign) < min_rr: reasons.append('reward/risk below minimum')
-        if abs(e-s) < finite(meta.get('stops_level',0),'stops_level')*finite(meta.get('point'),'point'):
-            reasons.append('broker minimum stop distance')
+        effective_stop_distance=abs(e-s)-spread
+        if effective_stop_distance < finite(meta.get('stops_level',0),'stops_level')*finite(meta.get('point'),'point'):
+            reasons.append('broker minimum stop distance after spread')
     except (KeyError,DataError) as exc:
         reasons.append(str(exc))
     return {'decision':'BLOCK' if reasons else 'PASS','reasons':reasons}

@@ -49,7 +49,7 @@ class Forex(unittest.TestCase):
         self.assertEqual(s['lots'],2)
         self.assertEqual(s['estimated_risk'],100)
         with self.assertRaises(DataError): size_lots(10,1,2000,1990,META)
-        self.assertEqual(risk_check({'direction':'SELL','entry':2,'stop_loss':2.1,'take_profit_1':1.8},
+        self.assertEqual(risk_check({'direction':'SELL','entry':2,'stop_loss':2.2,'take_profit_1':1.6},
                          {**META,'spread':.01},.05)['decision'],'PASS')
     def test_stop_first_backtest(self):
         data=[{'open':1,'high':1,'low':1,'close':1},{'open':1,'high':3,'low':.2,'close':1}]

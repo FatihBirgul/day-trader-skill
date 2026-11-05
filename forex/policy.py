@@ -11,15 +11,20 @@ def assess(plan, meta, balance, risk_pct, records=(), max_daily_risk_pct=3,
     today=now.astimezone(timezone.utc).date().isoformat()
     key={k:plan.get(k) for k in ('symbol','direction','entry','stop_loss','take_profit_1','timeframe')}
     fingerprint=hashlib.sha256(json.dumps(key,sort_keys=True,separators=(',',':')).encode()).hexdigest()[:16]
+    if any(not isinstance(r,dict) for r in records): raise DataError('invalid manual records')
     today_rows=[r for r in records if r.get('date')==today]
     reasons=[]
     if any(r.get('fingerprint')==fingerprint for r in today_rows): reasons.append('duplicate plan')
     if len(today_rows)>=max_trades: reasons.append('daily trade count limit')
     open_count=sum(1 for r in records if r.get('status')=='open')
-    daily_planned=sum(finite(r.get('planned_risk',0),'planned_risk') for r in today_rows)
-    daily_loss=sum(finite(r.get('realized_loss',0),'realized_loss') for r in today_rows)
+    planned=[finite(r.get('planned_risk',0),'planned_risk') for r in today_rows]
+    realized=[finite(r.get('realized_loss',0),'realized_loss') for r in today_rows]
+    if any(x<0 for x in planned+realized): raise DataError('negative manual risk record')
+    daily_planned=sum(planned)
+    daily_loss=sum(realized)
     capital=finite(balance,'balance')
-    if capital<=0: raise DataError('invalid balance')
+    if capital<=0 or min(max_daily_risk_pct,max_daily_loss_pct,max_trades,max_open)<=0:
+        raise DataError('invalid risk policy limits')
     if daily_loss>=capital*finite(max_daily_loss_pct,'max_daily_loss_pct')/100: reasons.append('daily loss limit')
     spread_limit=finite(max_spread if max_spread is not None else meta.get('max_spread'),'max_spread')
     check=risk_check(plan,meta,spread_limit,min_rr,max_open,open_count)
