@@ -5,3 +5,5 @@ Windows'ta MetaTrader 5 terminalini kurup demo hesabında oturum açın. Python 
 V2 doğrulaması: `GET /api/v1/health` terminalin bağlı olduğunu denetler. Terminal kapalıysa HTTP 503 beklenir. `MT5_SYMBOL_MAP` eşlemesi brokerın Market Watch listesindeki tam ada karşılık gelmelidir; örnek yalnızca biçimi gösterir. Gerçek demo hesapta XAUUSD, EURUSD ve USDJPY için tick değeri, hesap para birimi, minimum lot, lot adımı, işlem izni ve `order_calc_profit` zarar işareti ayrıca kontrol edilmelidir. Cloud testleri bu gerçek bağlantıyı kapsamaz.
 
 V3: canlı BUY/SELL planı için brokerın doğrulanmış saatlerini `MT5_BROKER_HOURS` ile açıkça tanımlayın. Format ve sınırlar `docs/SESSION_ENGINE.md` içindedir. Yapılandırılmamış broker saatleri `UNKNOWN` kabul edilir.
+
+V3 tanılama: Windows demo terminali açıkken `python -m forex.mt5_diagnostic` çalıştırın. Bu salt okunur komut terminal bağlantısı, broker sembol adı, sözleşme/tick/lot metadata, son tick ve son kapanmış M15 mum zamanını JSON olarak gösterir; emir göndermez. Cloud Linux ortamında komut `DATA_UNAVAILABLE` döndürdü, çünkü MetaTrader5 paketi/Windows terminali yoktu. Bu gerçek bağlantı doğrulaması değildir.
