@@ -1,3 +1,5 @@
 # Backtest sınırları
 
 Forex `backtest` kapanmış mumları işler ve aynı mumda stop ile hedefe değildiğinde stopu önce sayar. Spread maliyeti R sonucundan düşülür. Sonuçlar gerçekleşmiş işlem veya kazanma olasılığı değildir. İlk sürüm sadece verilen tek girişin sonraki mumlarını tarar; çoklu strateji örneklemesi, out-of-sample, slippage, gap, swap, komisyon, look-ahead ve survivorship denetimi tamamlanmadı. Gerçek tick sırası bulunmaz. Bu nedenle yatırım kararı için yeterli doğrulama değildir.
+
+V2 tek plan tekrar oynatma: giriş ilk mum kapanışında gerçekleşmiş varsayılır; ilk mumun fiyatı ile istenen girişin gerçekten eşleştiği doğrulanamaz. Sonraki mumlarda ilk stop veya hedef sonucu alınır ve işlem kapatılır. Açık kalan işlem `OPEN` ve gerçekleşmemiş R ile döner. `max_drawdown_r` tek kapanmış işlem için sıfır veya zarar büyüklüğüdür; çok işlemli strateji drawdown'ı değildir. Girişleri tarihsel olarak üreten çok işlemli strateji backtest'i henüz yoktur. Spread R'den düşülür; ek broker komisyonu, swap ve slippage modellenmez.

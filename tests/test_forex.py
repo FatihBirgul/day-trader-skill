@@ -5,7 +5,7 @@ from forex.providers import FixtureProvider
 from forex.api import app
 
 NOW=1800000000
-META={'tick_size':0.01,'tick_value':1,'tick_value_currency':'USD','point':0.01,
+META={'contract_size':100,'tick_size':0.01,'tick_value':1,'tick_value_currency':'USD','point':0.01,
       'volume_step':0.01,'volume_min':0.01,'volume_max':10,'stops_level':10,
       'account_currency':'USD','max_spread':1}
 
@@ -52,7 +52,7 @@ class Forex(unittest.TestCase):
         self.assertEqual(risk_check({'direction':'SELL','entry':2,'stop_loss':2.1,'take_profit_1':1.8},
                          {**META,'spread':.01},.05)['decision'],'PASS')
     def test_stop_first_backtest(self):
-        data=[{'high':1,'low':1},{'high':3,'low':.2}]
+        data=[{'high':1,'low':1,'close':1},{'high':3,'low':.2,'close':1}]
         self.assertLess(backtest(data,'BUY',1,.5,2,.01)['outcomes_r'][0],-1)
 
 if __name__=='__main__': unittest.main()
@@ -77,7 +77,7 @@ class FakeMT5:
         return SimpleNamespace(currency='USD')
     def symbol_info_tick(self,s):
         from types import SimpleNamespace
-        return SimpleNamespace(bid=1900,ask=1900.2,time_msc=NOW*1000)
+        return SimpleNamespace(bid=1900,ask=1900.2,time_msc=int(__import__('time').time()*1000))
     def copy_rates_from_pos(self,s,tf,start,count):
         now=int(__import__('time').time())
         return [{'time':now-1800,'open':1,'high':2,'low':.5,'close':1.5,'tick_volume':5},
@@ -120,4 +120,49 @@ class MoreForex(unittest.TestCase):
         self.assertEqual(client.get('/api/v1/candles/XAUUSD?count=10001').status_code,422)
         self.assertEqual(client.get('/api/v1/analysis/BAD').status_code,422)
         self.assertEqual(client.post('/api/v1/backtests',json={'symbol':'XAUUSD','direction':'BUY','entry':1,'stop_loss':.5,'take_profit':2,'spread':0,'count':10001}).status_code,422)
+        app.state.provider=None
+
+class FinancialSafety(unittest.TestCase):
+    def test_single_trade_closes_once(self):
+        rows=[{'high':1,'low':1,'close':1},{'high':2.1,'low':.8,'close':2},
+              {'high':2.2,'low':.2,'close':.3}]
+        r=backtest(rows,'BUY',1,.5,2,.01)
+        self.assertEqual((r['trades'],r['status'],len(r['outcomes_r'])),(1,'TARGET',1))
+        self.assertEqual(r['bars_evaluated'],1)
+    def test_stop_first_and_open(self):
+        rows=[{'high':1,'low':1,'close':1},{'high':2.1,'low':.4,'close':1}]
+        self.assertEqual(backtest(rows,'BUY',1,.5,2)['status'],'STOP')
+        self.assertEqual(backtest([rows[0],{'high':1.2,'low':.8,'close':1.1}],
+                                  'BUY',1,.5,2)['status'],'OPEN')
+    def test_sell_exit_and_cost(self):
+        rows=[{'high':2,'low':2,'close':2},{'high':2.2,'low':.9,'close':1}]
+        a=backtest(rows,'SELL',2,2.5,1,0)
+        b=backtest(rows,'SELL',2,2.5,1,.1)
+        self.assertEqual(a['status'],'TARGET')
+        self.assertAlmostEqual(a['result_r']-b['result_r'],.2)
+        rows[1]['high']=2.6
+        self.assertEqual(backtest(rows,'SELL',2,2.5,1)['status'],'STOP')
+    def test_time_order_rejected(self):
+        rows=[{'time':2,'high':1,'low':1,'close':1},
+              {'time':1,'high':2,'low':.8,'close':1.1}]
+        with self.assertRaises(DataError): backtest(rows,'BUY',1,.5,2)
+    def test_broker_profit_sign_and_grid(self):
+        meta={**META,'volume_min':.03,'volume_step':.02,'volume_max':.11,
+              'account_currency':'EUR','tick_value_currency':'USD'}
+        def loss(side,lots,entry,stop): return -100*lots
+        result=size_lots(100,5,1,.5,meta,loss,'BUY','EUR')
+        self.assertEqual(result['lots'],.05)
+        self.assertEqual(result['currency'],'EUR')
+        with self.assertRaises(DataError): size_lots(100,5,1,.5,meta,lambda *args: 5,'BUY','EUR')
+        with self.assertRaises(DataError): size_lots(100,5,1,.5,meta,None,'BUY','EUR')
+        with self.assertRaises(DataError): size_lots(100,5,1,.5,meta,loss,'BUY','USD')
+    def test_fixture_symbol_isolation(self):
+        p=FixtureProvider({'EURUSD':{'metadata':{**META,'tick_value':2},'quote':{},'candles':{}},
+                           'USDJPY':{'metadata':{**META,'tick_value':3},'quote':{},'candles':{}}})
+        self.assertEqual(p.loss_for('USDJPY','BUY',1,100,99),-300)
+        self.assertEqual(p.loss_for('EURUSD','BUY',1,100,99),-200)
+    def test_api_health_requires_terminal(self):
+        from forex.providers import MT5Provider
+        app.state.provider=MT5Provider(FakeMT5(),{'XAUUSD':'XAUUSD.r'})
+        self.assertEqual(TestClient(app).get('/api/v1/health').status_code,503)
         app.state.provider=None

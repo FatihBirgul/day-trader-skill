@@ -17,3 +17,7 @@ Başlangıç: `work` branch, `3d0f4ef`; 315 test geçti. Orijinal hisse akışı
 | trader-pelosi | Korundu, Forex'te kapsam dışı | Kongre hisse bildirimleri Forex zincirinde kullanılmaz. |
 
 Forex analizi için `forex/` paketi gerekiyor: ortak provider arayüzü, MT5 yaşam döngüsü ve API mevcut hisse dosyalarına yerleştirilirse NYSE ve hisse emir kodlarıyla karışır. Bu paket mevcut analiz işlevlerini yükler; tüm eski algoritmaların Forex'e taşındığı iddia edilmez.
+
+## V2 yeniden kullanım sınırı
+
+Fiilen çalışan ortak işlevler: `trader-scanner/scan.py:rsi`, `trader-entry/entry.py:closed_bar_breakout`, `trader-exit/exit.py:atr_of`, `trader-timemachine/timemachine.py:first_exit`. Hisse `risk.check` ve `budget.size_trade` Forex işlem nesnesinde çalıştırılmıyor; bu iki modül Forex akışına bağlı değildir. Forex risk ve lot kontrolleri broker metadata ve hesap para birimine bağlı olduğu için ayrı tutuldu. Haber ve uyarı işlevleri de henüz Forex akışında çağrılmıyor.

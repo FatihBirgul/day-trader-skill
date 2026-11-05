@@ -4,7 +4,7 @@ import threading
 import os
 import json
 from datetime import datetime, timezone
-from .core import DataError, SYMBOLS, TIMEFRAMES
+from .core import DataError, SYMBOLS, TIMEFRAMES, finite, validate_bars
 
 class FixtureProvider:
     name='fixture-test-only'
@@ -12,8 +12,8 @@ class FixtureProvider:
     def metadata(self,symbol): return self.data[symbol]['metadata']
     def quote(self,symbol): return self.data[symbol]['quote']
     def candles(self,symbol,timeframe,count=220): return self.data[symbol]['candles'][timeframe][-count:]
-    def calc_profit(self,side,lots,entry,stop):
-        m=self.data[next(iter(self.data))]['metadata']
+    def loss_for(self,symbol,side,lots,entry,stop):
+        m=self.metadata(symbol)
         return (stop-entry)*(1 if side=='BUY' else -1)*lots*m['tick_value']/m['tick_size']
 
 class MT5Provider:
@@ -32,9 +32,21 @@ class MT5Provider:
         self.connected=False
     def connect(self):
         with self.lock:
+            if self.connected and hasattr(self.mt5, 'terminal_info'):
+                terminal = self.mt5.terminal_info()
+                if terminal is None or not getattr(terminal, 'connected', False):
+                    self.mt5.shutdown()
+                    self.connected = False
             if not self.connected:
                 if not self.mt5.initialize(): raise DataError(f'MT5 initialize failed: {self.mt5.last_error()}')
                 self.connected=True
+    def health(self):
+        with self.lock:
+            self.connect()
+            terminal = self.mt5.terminal_info() if hasattr(self.mt5, 'terminal_info') else None
+            if terminal is None or not getattr(terminal, 'connected', False):
+                raise DataError('MT5 terminal disconnected')
+            return {'connected':True,'trade_allowed':bool(getattr(terminal,'trade_allowed',False))}
     def close(self):
         with self.lock:
             if self.connected: self.mt5.shutdown(); self.connected=False
@@ -43,7 +55,10 @@ class MT5Provider:
         self.connect()
         actual=self.mappings.get(symbol,symbol)
         info=self.mt5.symbol_info(actual)
-        if info is None or not (actual.upper().startswith(symbol) or actual.upper().endswith(symbol)):
+        if info is None or not actual or not isinstance(actual,str):
+            raise DataError('broker symbol mapping unverified')
+        # An alias is trusted only when explicitly configured and resolves to an exact MT5 name.
+        if actual != symbol and self.mappings.get(symbol) != actual:
             raise DataError('broker symbol mapping unverified')
         if not self.mt5.symbol_select(actual,True): raise DataError('symbol_select failed')
         return actual,info
@@ -51,17 +66,27 @@ class MT5Provider:
         with self.lock:
             actual,i=self._symbol(symbol)
             account=self.mt5.account_info()
+            if account is None: raise DataError('MT5 account unavailable')
+            required=('trade_contract_size','trade_tick_size','trade_tick_value','point','volume_min','volume_max','volume_step','trade_stops_level')
+            if any(not hasattr(i,key) for key in required): raise DataError('incomplete broker metadata')
+            if any(finite(getattr(i,key),key) <= 0 for key in required[:-1]): raise DataError('invalid broker metadata')
             return {'symbol':symbol,'broker_symbol':actual,'contract_size':i.trade_contract_size,
                     'tick_size':i.trade_tick_size,'tick_value':i.trade_tick_value,
                     'point':i.point,'volume_min':i.volume_min,'volume_max':i.volume_max,
                     'volume_step':i.volume_step,'stops_level':i.trade_stops_level,
+                    'trade_allowed':bool(getattr(i,'trade_mode',1)) and bool(getattr(account,'trade_allowed',True)),
                     'account_currency':getattr(account,'currency',None),
                     'tick_value_currency':getattr(account,'currency',None) if account else None}
     def quote(self,symbol):
         with self.lock:
             actual,_=self._symbol(symbol); t=self.mt5.symbol_info_tick(actual)
             if t is None: raise DataError('tick unavailable')
-            return {'symbol':symbol,'bid':t.bid,'ask':t.ask,'time':t.time_msc/1000 if getattr(t,'time_msc',0) else t.time}
+            stamp=t.time_msc/1000 if getattr(t,'time_msc',0) else t.time
+            bid,ask=finite(t.bid,'bid'),finite(t.ask,'ask')
+            age=datetime.now(timezone.utc).timestamp()-finite(stamp,'tick time')
+            if age>120 or age < -5: raise DataError('stale tick')
+            if bid<=0 or ask<=bid: raise DataError('invalid bid/ask')
+            return {'symbol':symbol,'bid':bid,'ask':ask,'time':stamp}
     def candles(self,symbol,timeframe,count=220):
         if timeframe not in TIMEFRAMES: raise DataError('invalid timeframe')
         if not 1<=count<=10000: raise DataError('invalid candle count')
@@ -72,9 +97,14 @@ class MT5Provider:
             if rows is None: raise DataError('candles unavailable')
             now=datetime.now(timezone.utc).timestamp()
             # MT5 bar timestamp marks the OPEN; omit current unfinished bar.
-            return [{'time':int(r['time']),'open':float(r['open']),'high':float(r['high']),
-                     'low':float(r['low']),'close':float(r['close']),'tick_volume':int(r['tick_volume'])}
-                    for r in rows if int(r['time'])+TIMEFRAMES[timeframe]<=now][-count:]
+            try:
+                result=[{'time':int(r['time']),'open':float(r['open']),'high':float(r['high']),
+                         'low':float(r['low']),'close':float(r['close']),'tick_volume':int(r['tick_volume'])}
+                        for r in rows if int(r['time'])+TIMEFRAMES[timeframe]<=now][-count:]
+            except (KeyError,TypeError,ValueError) as exc:
+                raise DataError('invalid MT5 candle data') from exc
+            validate_bars(result,timeframe,now)
+            return result
     def calc_profit(self,side,lots,entry,stop):
         with self.lock:
             order_type=self.mt5.ORDER_TYPE_BUY if side=='BUY' else self.mt5.ORDER_TYPE_SELL

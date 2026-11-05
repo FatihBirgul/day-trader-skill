@@ -16,13 +16,9 @@ def legacy(folder, filename):
     return module
 
 scanner = legacy('trader-scanner', 'scan.py')
-budget = legacy('trader-budget', 'size.py')
-risk = legacy('trader-risk', 'check.py')
 entry = legacy('trader-entry', 'entry.py')
 exit_planner = legacy('trader-exit', 'exit.py')
 timemachine = legacy('trader-timemachine', 'timemachine.py')
-news_skill = legacy('trader-news', 'news.py')
-alerts_skill = legacy('trader-alerts', 'alerts.py')
 
 TIMEFRAMES = {'M5': 300, 'M15': 900, 'M30': 1800, 'H1': 3600, 'H4': 14400, 'D1': 86400}
 SYMBOLS = ('XAUUSD', 'EURUSD', 'GBPUSD', 'USDJPY')
@@ -95,34 +91,50 @@ def price_round(value, tick, mode='nearest'):
     return float(q*Decimal(str(tick)))
 
 def size_lots(balance, risk_pct, entry_price, stop, meta, calc_profit=None, side='BUY', account_currency=None):
-    balance, risk_pct = finite(balance,'balance'), finite(risk_pct,'risk percent')
+    """Size on the broker volume grid, always verifying a loss in account currency."""
+    balance, risk_pct = finite(balance, 'balance'), finite(risk_pct, 'risk percent')
     if balance <= 0 or not 0 < risk_pct <= 5:
         raise DataError('invalid balance or risk percent')
-    tick = finite(meta.get('tick_size'),'tick_size')
-    value = finite(meta.get('tick_value'),'tick_value')
-    step = finite(meta.get('volume_step'),'volume_step')
-    minimum = finite(meta.get('volume_min'),'volume_min')
-    maximum = finite(meta.get('volume_max'),'volume_max')
-    if min(tick,value,step,minimum,maximum) <= 0 or maximum < minimum:
+    tick = finite(meta.get('tick_size'), 'tick_size')
+    step = finite(meta.get('volume_step'), 'volume_step')
+    minimum = finite(meta.get('volume_min'), 'volume_min')
+    maximum = finite(meta.get('volume_max'), 'volume_max')
+    contract = finite(meta.get('contract_size'), 'contract_size')
+    if min(tick, step, minimum, maximum, contract) <= 0 or maximum < minimum:
         raise DataError('invalid contract metadata')
-    if account_currency and meta.get('tick_value_currency') != account_currency and calc_profit is None:
-        raise DataError('tick value currency not verified for account')
-    ep, sl = finite(entry_price,'entry'), finite(stop,'stop')
-    if side not in ('BUY','SELL') or (ep-sl)*(1 if side=='BUY' else -1) <= 0:
+    currency = account_currency or meta.get('account_currency')
+    if not currency or (meta.get('account_currency') and currency != meta['account_currency']):
+        raise DataError('account currency unavailable or mismatched')
+    ep, sl = finite(entry_price, 'entry'), finite(stop, 'stop')
+    if ep <= 0 or sl <= 0 or side not in ('BUY', 'SELL') or (ep-sl)*(1 if side == 'BUY' else -1) <= 0:
         raise DataError('stop is on wrong side of entry')
-    dist = abs(ep-sl)
-    if dist < tick:
+    if abs(ep-sl) < tick:
         raise DataError('stop distance below tick size')
-    per_lot = abs(calc_profit(side, 1.0, entry_price, stop)) if calc_profit else dist/tick*value
-    per_lot = finite(per_lot,'estimated loss')
+    if calc_profit:
+        sample = finite(calc_profit(side, minimum, ep, sl), 'broker profit')
+        if sample >= 0:
+            raise DataError('broker did not report a stop-loss loss')
+        per_lot = -sample / minimum
+    else:
+        value = finite(meta.get('tick_value'), 'tick_value')
+        if value <= 0 or meta.get('tick_value_currency') != currency:
+            raise DataError('tick value not verified in account currency')
+        per_lot = abs(ep-sl)/tick*value
     if per_lot <= 0:
         raise DataError('estimated loss unavailable')
-    cap = balance*risk_pct/100
-    units = int((Decimal(str(min(cap/per_lot, maximum))) / Decimal(str(step))).to_integral_value(rounding=ROUND_FLOOR))
-    lots = float(Decimal(units)*Decimal(str(step)))
-    if lots < minimum:
+    cap = Decimal(str(balance))*Decimal(str(risk_pct))/Decimal('100')
+    dmin, dstep, dmax = map(lambda x: Decimal(str(x)), (minimum, step, maximum))
+    if Decimal(str(per_lot))*dmin > cap:
         raise DataError('minimum lot exceeds risk budget')
-    return {'lots':lots,'estimated_risk':round(lots*per_lot,2),'risk_cap':round(cap,2),'currency':account_currency or meta.get('tick_value_currency')}
+    upper = min(dmax, cap/Decimal(str(per_lot)))
+    units = ((upper-dmin)/dstep).to_integral_value(rounding=ROUND_FLOOR)
+    lots = dmin + units*dstep
+    if lots < dmin or lots > dmax:
+        raise DataError('volume grid unavailable')
+    loss = -finite(calc_profit(side, float(lots), ep, sl), 'broker profit') if calc_profit else float(lots)*per_lot
+    if loss <= 0 or Decimal(str(loss)) > cap:
+        raise DataError('broker loss exceeds risk budget')
+    return {'lots':float(lots),'estimated_risk':round(loss,2),'risk_cap':round(float(cap),2),'currency':currency}
 
 def risk_check(plan, meta, max_spread, min_rr=1.5, max_open_positions=1, open_positions=0):
     reasons=[]
@@ -150,6 +162,7 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
         meta=provider.metadata(symbol)
         quote=provider.quote(symbol)
         if not meta or not quote: raise DataError('quote or metadata unavailable')
+        if meta.get('trade_allowed') is False: raise DataError('market or account trading disabled')
         bid,ask=finite(quote.get('bid'),'bid'),finite(quote.get('ask'),'ask')
         qt=finite(quote.get('time'),'tick time')
         if bid <= 0 or ask <= bid: raise DataError('invalid bid/ask')
@@ -162,8 +175,10 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
         last=validate_bars(bars,timeframe,now)
         if now-last-TIMEFRAMES[timeframe] > TIMEFRAMES[timeframe]*2: raise DataError('stale candles')
         upper=provider.candles(symbol,'H4',220) if timeframe!='H4' else bars
-        validate_bars(upper,'H4',now)
-        a,b=indicators(bars),indicators(upper)
+        upper_last=validate_bars(upper,'H4',now)
+        if now-upper_last-TIMEFRAMES['H4'] > TIMEFRAMES['H4']*2: raise DataError('stale H4 candles')
+        a=indicators(bars)
+        b=a if timeframe=='H4' else indicators(upper)
         close=bars[-1]['close']
         trend='BUY' if close>a['ema20']>a['ema50']>a['ema200'] else 'SELL' if close<a['ema20']<a['ema50']<a['ema200'] else 'WAIT'
         higher='BUY' if upper[-1]['close']>b['ema50']>b['ema200'] else 'SELL' if upper[-1]['close']<b['ema50']<b['ema200'] else 'WAIT'
@@ -197,17 +212,36 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
     return base
 
 def backtest(bars, direction, entry_price, stop, target, spread=0):
-    if direction not in ('BUY','SELL') or not 0<=spread<abs(entry_price-stop): raise DataError('invalid backtest parameters')
-    if len(bars)<2 or len(bars)>10000: raise DataError('2..10000 candles required')
-    sign=1 if direction=='BUY' else -1
-    risk=abs(entry_price-stop)
-    if (entry_price-stop)*sign<=0 or (target-entry_price)*sign<=0: raise DataError('invalid levels')
-    outcomes=[]; equity=peak=drawdown=0.0
-    for bar in bars[1:]:
-        hi,lo=finite(bar['high'],'high'),finite(bar['low'],'low')
-        outcome=timemachine.first_exit(hi,lo,stop,target,direction.lower())
-        if outcome=='stop': result=-1-spread/risk
-        elif outcome=='target': result=abs(target-entry_price)/risk-spread/risk
-        else: continue
-        outcomes.append(result);equity+=result;peak=max(peak,equity);drawdown=max(drawdown,peak-equity)
-    return {'trades':len(outcomes),'outcomes_r':outcomes,'max_drawdown_r':drawdown,'policy':'stop_first'}
+    """Replay one assumed fill at the close of bars[0], then at most one exit."""
+    ep, sl, tp, cost = [finite(v, n) for v,n in ((entry_price,'entry'),(stop,'stop'),(target,'target'),(spread,'spread'))]
+    if direction not in ('BUY','SELL') or not 0 <= cost < abs(ep-sl):
+        raise DataError('invalid backtest parameters')
+    if len(bars) < 2 or len(bars) > 10000:
+        raise DataError('2..10000 candles required')
+    sign = 1 if direction == 'BUY' else -1
+    risk_distance = abs(ep-sl)
+    if (ep-sl)*sign <= 0 or (tp-ep)*sign <= 0:
+        raise DataError('invalid levels')
+    previous_time = None
+    for i,bar in enumerate(bars):
+        hi,lo,cl = [finite(bar[k],k) for k in ('high','low','close')]
+        if lo <= 0 or not lo <= cl <= hi:
+            raise DataError('invalid backtest candle')
+        if 'time' in bar:
+            t = finite(bar['time'],'time')
+            if previous_time is not None and t <= previous_time:
+                raise DataError('non-monotonic candle time')
+            previous_time=t
+        if i == 0:
+            continue
+        outcome = timemachine.first_exit(hi,lo,sl,tp,direction.lower())
+        if outcome:
+            gross = -1.0 if outcome == 'stop' else abs(tp-ep)/risk_distance
+            net = gross-cost/risk_distance
+            return {'trades':1,'outcomes_r':[net],'result_r':net,'status':outcome.upper(),
+                    'exit_time':bar.get('time'),'bars_evaluated':i,'max_drawdown_r':max(0,-net),
+                    'policy':'stop_first','entry_assumption':'filled_at_first_bar_close'}
+    last = finite(bars[-1]['close'],'close')
+    return {'trades':0,'outcomes_r':[],'result_r':(last-ep)*sign/risk_distance-cost/risk_distance,
+            'status':'OPEN','exit_time':None,'bars_evaluated':len(bars)-1,
+            'max_drawdown_r':None,'policy':'stop_first','entry_assumption':'filled_at_first_bar_close'}

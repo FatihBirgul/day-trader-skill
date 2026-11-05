@@ -19,3 +19,9 @@ Base URL: `http://127.0.0.1:8000/api/v1`. OpenAPI: `/openapi.json`. Tüm zaman d
 Örnek: `GET /api/v1/analysis/XAUUSD?timeframe=M15` için veri yoksa `{"symbol":"XAUUSD","signal":"WAIT","plan":null,"data_status":"DATA_UNAVAILABLE","reasons":["quote or metadata unavailable"],"provider":"mt5",...}`. Veri varsa BUY/SELL planında `entry`, `stop_loss`, `take_profit_1`, `take_profit_2`, `risk_reward`, `timestamp` bulunur. Plan oluşmuyorsa `WAIT` döner. `POST /risk/calculate` örnek gövde: `{"symbol":"XAUUSD","direction":"BUY","balance":10000,"risk_pct":1,"entry":2000,"stop_loss":1999,"account_currency":"USD"}`.
 
 HTTP 422 geçersiz girdi veya broker veri hatası; 404 provider'da bulunmayan sembol; 503 MT5 paketi/terminal erişilemez. FastAPI Pydantic hataları standart `detail` dizisi kullanır. Veri hataları `detail.status` ve `detail.reason` döndürür. Bu sözleşme ilk sürümdür; PWA, `data_status=OK` dışında fiyatı canlı göstermemelidir.
+
+## V1 sözleşme düzeltmesi (backend 0.2)
+
+`/api/v1/analysis/{symbol}` ve `/signals/{symbol}` veri durumu `STALE` veya `DATA_UNAVAILABLE` ise önceki 200 yerine HTTP 503 döndürür. JSON gövdesindeki `signal`, `plan`, `data_status`, `provider`, `reasons` korunur. Bu geçişte PWA hem HTTP kodunu hem `data_status` alanını okumalıdır. `/health` MT5 terminalinin `connected` durumunu sorgular; bağlantı yoksa 503, fixture ile çalışıyorsa 200 ve `data_status=TEST_ONLY` döner. Sembol ve zaman dilimi hataları 422 döner. Risk ve backtest için OpenAPI yanıt modelleri eklendi.
+
+Tek işlem tekrar oynatma yanıtında `result.status` değeri `STOP`, `TARGET` veya `OPEN`; `result.trades` kapandıysa 1, açıksa 0'dır. `result.result_r` kapanışta net R, açıkken son mumdaki gerçekleşmemiş R'dir. `outcomes_r` yalnızca kapanmış sonuç içerir. `entry_assumption=filled_at_first_bar_close` giriş dolumunu varsayar; veri bunu ispatlamaz. `policy=stop_first` aynı mum çakışmasını belirtir.
