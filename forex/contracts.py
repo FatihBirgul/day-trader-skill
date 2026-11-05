@@ -24,7 +24,7 @@ class Snapshot:
         return json.loads(self.payload_json)
 
 
-def _bars(rows, timeframe, as_of, metadata):
+def _bars(rows, timeframe, as_of, metadata, symbol, provider_name):
     if not isinstance(rows, (list, tuple)) or not 200 <= len(rows) <= 256:
         raise DataError('insufficient or excessive closed candles')
     result = []
@@ -37,8 +37,13 @@ def _bars(rows, timeframe, as_of, metadata):
             raise DataError('integer UTC candle time required')
         if raw.get('is_final', True) is not True:
             raise DataError('unfinished candle')
+        source=metadata.get('source',provider_name)
+        for key,expected in (('symbol',symbol),('source',source),('timeframe',timeframe),
+                             ('price_kind','bid'),('broker_symbol',metadata.get('broker_symbol',symbol))):
+            if key in raw and raw[key]!=expected:
+                raise DataError('candle identity mismatch: '+key)
         bar = {'time': t, 'open_time_utc': t, 'close_time_utc': t + duration,
-               'is_final': True, 'timeframe': timeframe}
+               'is_final': True, 'timeframe': timeframe,'source':source,'price_kind':'bid'}
         for name in ('open', 'high', 'low', 'close'):
             if isinstance(raw.get(name), bool):
                 raise DataError('boolean candle price')
@@ -62,6 +67,8 @@ def _bars(rows, timeframe, as_of, metadata):
                 raise DataError('overlapping or misaligned candles')
             if gap > duration * 500:
                 raise DataError('candle gap exceeds validation budget')
+            if gap and not metadata.get('broker_hours'):
+                raise DataError('missing candle without verified broker hours')
             # Missing observations are allowed only when the explicit broker
             # schedule says CLOSED for the entire missing interval (minute grid).
             for missing in range(result[-1]['close_time_utc'], t, 60):
@@ -98,25 +105,27 @@ def capture(provider, symbol, timeframe, as_of, confirmations=('H4',)):
     if as_of - quote_time > 120 or quote_time > as_of + 5:
         raise DataError('stale tick')
     quote = {**quote, 'bid': bid, 'ask': ask, 'time': quote_time}
-    primary = _bars(provider.candles(symbol, timeframe, 256), timeframe, as_of, meta)
+    primary = _bars(provider.candles(symbol, timeframe, 256), timeframe, as_of, meta, symbol, provider.name)
     primary_close = primary[-1]['close_time_utc']
     frames = {timeframe: primary}
     for tf in confirmations:
         if tf == timeframe:
             continue
         rows = provider.candles(symbol, tf, 256)
+        if not isinstance(rows, (list, tuple)) or len(rows)>256:
+            raise DataError('invalid confirmation candle batch')
         # Higher frames are intentionally viewed at the primary decision close.
         # Invalid/non-integer timestamps must not disappear through this cut.
         if any(not isinstance(b, dict) or type(b.get('time')) is not int for b in rows):
             raise DataError('invalid confirmation candle time')
         rows = [b for b in rows if b['time'] + TIMEFRAMES[tf] <= primary_close]
-        frames[tf] = _bars(rows, tf, primary_close, meta)
+        frames[tf] = _bars(rows, tf, primary_close, meta, symbol, provider.name)
     body = {'schema_version': SCHEMA_VERSION, 'symbol': symbol,
             'broker_symbol': meta.get('broker_symbol', symbol),
             'market_type': meta.get('market_type', 'unverified'),
             'contract_type': meta.get('contract_type', 'unverified'),
             'venue': meta.get('broker_server', meta.get('venue', 'unverified')),
-            'price_kind': meta.get('price_kind', 'bid'), 'provider': provider.name,
+            'price_kind': meta.get('price_kind', 'unverified'), 'provider': provider.name,
             'data_version': meta.get('data_version', 'provider-unversioned'),
             'timeframe': timeframe, 'as_of_utc': as_of,
             'decision_close_utc': primary_close, 'confirmations': list(confirmations),

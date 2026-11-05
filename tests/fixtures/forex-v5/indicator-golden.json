@@ -1,0 +1,26 @@
+{
+  "provenance": "Independent closed-form arithmetic fixtures, no market-performance claim",
+  "rsi_wilder": {
+    "construction": "100..114 inclusive, then 113..100 inclusive; 14 unit gains followed by 14 unit losses",
+    "expected": 35.433531021986,
+    "derivation": "100*(13/14)^14; rolling RSI on the final 14 changes is zero"
+  },
+  "linear": {
+    "construction": "close=1..220, high=close+1, low=close-1, open=close",
+    "ema9": 216.0,
+    "ema20": 210.5,
+    "ema21": 210.0,
+    "ema50": 195.5,
+    "ema100": 170.5,
+    "ema200": 120.5,
+    "macd": 7.0,
+    "macd_signal": 7.0,
+    "macd_histogram": 0.0,
+    "atr14": 2.0,
+    "rsi14": 100.0,
+    "sma20": 210.5,
+    "bollinger_upper": 222.0325625946708,
+    "bollinger_lower": 198.9674374053292,
+    "derivation": "EMA(n)=last-(n-1)/2 for a unit slope with SMA seed. MACD=7 for every aligned observation. TR=2. Population variance of 20 consecutive integers=(20^2-1)/12=33.25."
+  }
+}

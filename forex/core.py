@@ -28,9 +28,11 @@ class DataError(ValueError):
     pass
 
 def finite(value, name):
+    if isinstance(value,bool):
+        raise DataError(f'{name} must be numeric, not boolean')
     try:
         n = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         raise DataError(f'{name} missing or invalid')
     if not math.isfinite(n):
         raise DataError(f'{name} must be finite')
@@ -174,21 +176,38 @@ def size_lots(balance, risk_pct, entry_price, stop, meta, calc_profit=None, side
         loss = float(lots)*per_lot
     if loss <= 0 or Decimal(str(loss)) > cap:
         raise DataError('broker loss exceeds risk budget')
-    return {'lots':float(lots),'estimated_risk':round(loss,2),'risk_cap':round(float(cap),2),'currency':currency}
+    return {'lots':float(lots),'estimated_risk':round(loss,2),'unrounded_risk':loss,
+            'risk_cap':round(float(cap),2),'currency':currency}
 
 def risk_check(plan, meta, max_spread, min_rr=1.5, max_open_positions=1, open_positions=0):
     reasons=[]
     try:
+        max_spread=finite(max_spread,'max_spread')
+        min_rr=finite(min_rr,'minimum reward/risk')
+        if max_spread<=0 or min_rr<=0: reasons.append('invalid risk limits')
         if plan['direction'] not in ('BUY','SELL'): reasons.append('invalid direction')
+        if 'allowed_directions' in meta and plan['direction'] not in meta['allowed_directions']:
+            reasons.append('broker direction not permitted')
         spread=finite(meta.get('spread'),'spread')
         if spread < 0 or spread > max_spread: reasons.append('spread exceeds limit')
         if open_positions >= max_open_positions: reasons.append('position limit reached')
         e,s,t = [finite(plan[k],k) for k in ('entry','stop_loss','take_profit_1')]
+        if min(e,s,t)<=0: reasons.append('nonpositive plan price')
         sign = 1 if plan['direction']=='BUY' else -1
         if (e-s)*sign <= 0 or (t-e)*sign <= 0: reasons.append('invalid stop or target side')
         elif (t-e)*sign/((e-s)*sign) < min_rr: reasons.append('reward/risk below minimum')
+        point=finite(meta.get('point'),'point')
+        stops=finite(meta.get('stops_level'),'stops_level')
+        tick=finite(meta.get('tick_size'),'tick_size')
+        if point<=0 or tick<=0 or stops<0: reasons.append('invalid broker stop metadata')
+        if tick>0 and any(abs(value-price_round(value,tick))>max(1e-10,tick*1e-7) for value in (s,t)):
+            reasons.append('stop or target off broker tick grid')
+        if 'take_profit_2' in plan:
+            t2=finite(plan['take_profit_2'],'take_profit_2')
+            if t2<=0 or (t2-t)*sign<=0: reasons.append('invalid second target')
+            if tick>0 and abs(t2-price_round(t2,tick))>max(1e-10,tick*1e-7): reasons.append('second target off broker tick grid')
         effective_stop_distance=abs(e-s)-spread
-        if effective_stop_distance < finite(meta.get('stops_level',0),'stops_level')*finite(meta.get('point'),'point'):
+        if effective_stop_distance < stops*point:
             reasons.append('broker minimum stop distance after spread')
     except (KeyError,DataError) as exc:
         reasons.append(str(exc))
@@ -250,7 +269,7 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
         votes=candidates(bars,a)
         decision,why=resolve(votes,higher)
         from .structure import market_structure
-        base['market_structure']=market_structure(bars)
+        base['market_structure']=market_structure(bars,timeframe_seconds=TIMEFRAMES[timeframe])
         base['indicators']=a
         base['strategies']=votes
         base['reasons']=[f'trend={trend}',f'confirmations={higher}']+why
@@ -269,6 +288,7 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
                   'risk_reward':2.0,'invalidation':f'closed candle beyond {stop}',
                   'timestamp':base['timestamp'],'reasons':base['reasons']}
             verdict=risk_check(plan,meta,max_spread)
+            base['risk_verdict']=verdict
             if verdict['decision']=='PASS':
                 if balance is not None:
                     plan['position_size']=size_lots(balance,risk_pct,ep,stop,meta,(lambda side,lots,e,s: provider.loss_for(symbol,side,lots,e,s)) if hasattr(provider,'loss_for') else getattr(provider,'calc_profit',None),decision,meta.get('account_currency'))

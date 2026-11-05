@@ -10,7 +10,9 @@ from .core import DataError, SYMBOLS, TIMEFRAMES, finite, validate_bars
 class FixtureProvider:
     name='fixture-test-only'
     def __init__(self, data): self.data=data
-    def metadata(self,symbol): return copy.deepcopy(self.data[symbol]['metadata'])
+    def metadata(self,symbol):
+        return copy.deepcopy({'symbol':symbol,'price_kind':'bid','source':self.name,
+                              **self.data[symbol]['metadata']})
     def quote(self,symbol): return copy.deepcopy(self.data[symbol]['quote'])
     def candles(self,symbol,timeframe,count=220): return copy.deepcopy(self.data[symbol]['candles'][timeframe][-count:])
     def loss_for(self,symbol,side,lots,entry,stop):
@@ -92,8 +94,16 @@ class MT5Provider:
             required=('trade_contract_size','trade_tick_size','trade_tick_value','point','volume_min','volume_max','volume_step','trade_stops_level')
             if any(not hasattr(i,key) for key in required): raise DataError('incomplete broker metadata')
             if any(finite(getattr(i,key),key) <= 0 for key in required[:-1]): raise DataError('invalid broker metadata')
+            mode=getattr(i,'trade_mode',None)
+            allowed={1:['BUY'],2:['SELL'],4:['BUY','SELL']}.get(mode,[])
             return {'symbol':symbol,'broker_symbol':actual,'asset_type':'metal' if symbol=='XAUUSD' else 'forex',
                     'source':'mt5','digits':getattr(i,'digits',None),
+                    'market_type':'unverified','contract_type':'unverified','price_kind':'bid',
+                    'trade_calc_mode':getattr(i,'trade_calc_mode',None),
+                    'trade_mode':mode,'allowed_directions':allowed,
+                    'base_currency':getattr(i,'currency_base',None),
+                    'profit_currency':getattr(i,'currency_profit',None),
+                    'margin_currency':getattr(i,'currency_margin',None),
                     'freeze_level':getattr(i,'trade_freeze_level',None),
                     'tick_value_profit':getattr(i,'trade_tick_value_profit',None),
                     'tick_value_loss':getattr(i,'trade_tick_value_loss',None),
@@ -103,7 +113,7 @@ class MT5Provider:
                     'tick_size':i.trade_tick_size,'tick_value':i.trade_tick_value,
                     'point':i.point,'volume_min':i.volume_min,'volume_max':i.volume_max,
                     'volume_step':i.volume_step,'stops_level':i.trade_stops_level,
-                    'trade_allowed':bool(getattr(i,'trade_mode',1)) and bool(getattr(account,'trade_allowed',True)),
+                    'trade_allowed':bool(allowed) and getattr(account,'trade_allowed',False) is True,
                     'broker_hours':self.hours.get(symbol),
                     'account_currency':getattr(account,'currency',None),
                     'tick_value_currency':getattr(account,'currency',None) if account else None}
@@ -142,6 +152,8 @@ class MT5Provider:
             # The symbol is selected by the caller's metadata/quote request.
             raise DataError('symbol argument required for MT5 profit calculation')
     def loss_for(self,symbol,side,lots,entry,stop):
+        if side not in ('BUY','SELL') or min(finite(lots,'lots'),finite(entry,'entry'),finite(stop,'stop'))<=0:
+            raise DataError('invalid broker profit calculation inputs')
         with self.lock:
             actual,_=self._symbol(symbol)
             typ=self.mt5.ORDER_TYPE_BUY if side=='BUY' else self.mt5.ORDER_TYPE_SELL

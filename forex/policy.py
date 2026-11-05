@@ -33,7 +33,7 @@ def assess(plan, meta, balance, risk_pct, records=(), max_daily_risk_pct=3,
     try:
         sized=size_lots(capital,risk_pct,plan['entry'],plan['stop_loss'],meta,calc_profit,
                         plan['direction'],account_currency,commission_per_lot,slippage_price)
-        if daily_planned+sized['estimated_risk']>capital*finite(max_daily_risk_pct,'max_daily_risk_pct')/100:
+        if daily_planned+sized['unrounded_risk']>capital*finite(max_daily_risk_pct,'max_daily_risk_pct')/100:
             reasons.append('daily planned risk limit')
     except (DataError,KeyError) as exc:
         sized=None;reasons.append(str(exc))

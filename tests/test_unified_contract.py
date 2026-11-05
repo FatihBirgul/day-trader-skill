@@ -39,6 +39,12 @@ class SnapshotContract(unittest.TestCase):
         p.data['XAUUSD']['metadata']['symbol'] = 'BTCUSDT'
         with self.assertRaises(DataError): capture(p, 'XAUUSD', 'M15', NOW)
 
+    def test_mixed_candle_identity_is_not_discarded(self):
+        for fields in ({'source':'foreign-provider'}, {'symbol':'EURUSD'}, {'price_kind':'ask'}, {'timeframe':'H1'}):
+            p=fixture();p.data['XAUUSD']['candles']['M15'][10].update(fields)
+            with self.assertRaisesRegex(DataError,'identity mismatch'):
+                capture(p,'XAUUSD','M15',NOW)
+
 
 class ContextVeto(unittest.TestCase):
     def evidence(self):
@@ -66,3 +72,22 @@ class ContextVeto(unittest.TestCase):
     def test_nonfinite_rejected(self):
         with self.assertRaises(ValueError):
             context_evidence([{**self.evidence(), 'known_at': float('nan')}], NOW)
+
+class BrokerGapPolicy(unittest.TestCase):
+    def test_verified_weekend_gap_is_allowed_but_unknown_gap_is_not(self):
+        from datetime import datetime, timezone
+        p=fixture()
+        friday=int(datetime(2026,11,6,23,45,tzinfo=timezone.utc).timestamp())
+        monday=int(datetime(2026,11,9,tzinfo=timezone.utc).timestamp())
+        rows=p.data['XAUUSD']['candles']['M15']
+        for i,b in enumerate(rows):
+            b['time']=friday-(199-i)*900 if i<200 else monday+(i-200)*900
+        now=rows[-1]['time']+1800
+        p.data['XAUUSD']['quote']['time']=now-1
+        hours={'timezone':'UTC','weekly':{str(i):[['00:00','24:00']] for i in range(5)}}
+        p.data['XAUUSD']['metadata']['broker_hours']=hours
+        snapshot=capture(p,'XAUUSD','M15',now,('M15',))
+        self.assertEqual(len(snapshot.payload()['frames']['M15']),220)
+        p.data['XAUUSD']['metadata']['broker_hours']=None
+        with self.assertRaisesRegex(DataError,'missing candle'):
+            capture(p,'XAUUSD','M15',now,('M15',))
