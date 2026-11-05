@@ -78,7 +78,7 @@ def indicators(bars):
     sma20=mid;sma50=sum(closes[-50:])/50
     high=max(b['high'] for b in bars[-21:-1]);low=min(b['low'] for b in bars[-21:-1])
     previous_high=max(b['high'] for b in bars[-41:-21]);previous_low=min(b['low'] for b in bars[-41:-21])
-    return {'ema9':ema(closes,9),'ema20':ema(closes,20),'ema50':ema(closes,50),
+    return {'ema9':ema(closes,9),'ema20':ema(closes,20),'ema21':ema(closes,21),'ema50':ema(closes,50),
             'ema100':ema(closes,100),'ema200':ema(closes,200),'sma20':sma20,'sma50':sma50,
             'rsi14':scanner.rsi(closes),'atr14':atr(bars),'normalized_atr':atr(bars)/closes[-1],
             'macd':macd_line,'macd_signal':signal,'macd_histogram':histogram,
@@ -114,7 +114,8 @@ def price_round(value, tick, mode='nearest'):
     else: q = q.to_integral_value()
     return float(q*Decimal(str(tick)))
 
-def size_lots(balance, risk_pct, entry_price, stop, meta, calc_profit=None, side='BUY', account_currency=None):
+def size_lots(balance, risk_pct, entry_price, stop, meta, calc_profit=None, side='BUY', account_currency=None,
+              commission_per_lot=0, slippage_price=0):
     """Size on the broker volume grid, always verifying a loss in account currency."""
     balance, risk_pct = finite(balance, 'balance'), finite(risk_pct, 'risk percent')
     if balance <= 0 or not 0 < risk_pct <= 5:
@@ -134,16 +135,25 @@ def size_lots(balance, risk_pct, entry_price, stop, meta, calc_profit=None, side
         raise DataError('stop is on wrong side of entry')
     if abs(ep-sl) < tick:
         raise DataError('stop distance below tick size')
+    commission = finite(commission_per_lot, 'commission per lot')
+    slip = finite(slippage_price, 'slippage price')
+    if commission < 0 or slip < 0:
+        raise DataError('negative risk cost')
+    # Round-trip commission in account currency per lot; adverse stop slippage
+    # is an execution allowance, never another spread charge.
+    loss_stop = sl - slip if side == 'BUY' else sl + slip
+    if loss_stop <= 0:
+        raise DataError('invalid slippage-adjusted stop')
     if calc_profit:
-        sample = finite(calc_profit(side, minimum, ep, sl), 'broker profit')
+        sample = finite(calc_profit(side, minimum, ep, loss_stop), 'broker profit')
         if sample >= 0:
             raise DataError('broker did not report a stop-loss loss')
-        per_lot = -sample / minimum
+        per_lot = -sample / minimum + commission
     else:
         value = finite(meta.get('tick_value'), 'tick_value')
         if value <= 0 or meta.get('tick_value_currency') != currency:
             raise DataError('tick value not verified in account currency')
-        per_lot = abs(ep-sl)/tick*value
+        per_lot = abs(ep-loss_stop)/tick*value + commission
     if per_lot <= 0:
         raise DataError('estimated loss unavailable')
     cap = Decimal(str(balance))*Decimal(str(risk_pct))/Decimal('100')
@@ -155,7 +165,13 @@ def size_lots(balance, risk_pct, entry_price, stop, meta, calc_profit=None, side
     lots = dmin + units*dstep
     if lots < dmin or lots > dmax:
         raise DataError('volume grid unavailable')
-    loss = -finite(calc_profit(side, float(lots), ep, sl), 'broker profit') if calc_profit else float(lots)*per_lot
+    if calc_profit:
+        verified_profit = finite(calc_profit(side, float(lots), ep, loss_stop), 'broker profit')
+        if verified_profit >= 0:
+            raise DataError('broker did not report a stop-loss loss')
+        loss = -verified_profit + float(lots)*commission
+    else:
+        loss = float(lots)*per_lot
     if loss <= 0 or Decimal(str(loss)) > cap:
         raise DataError('broker loss exceeds risk budget')
     return {'lots':float(lots),'estimated_risk':round(loss,2),'risk_cap':round(float(cap),2),'currency':currency}

@@ -5,7 +5,8 @@ from .core import DataError, finite, risk_check, size_lots
 
 def assess(plan, meta, balance, risk_pct, records=(), max_daily_risk_pct=3,
            max_daily_loss_pct=3, max_trades=3, max_open=1, max_spread=None,
-           min_rr=1.5, calc_profit=None, account_currency=None, now=None):
+           min_rr=1.5, calc_profit=None, account_currency=None, now=None,
+           commission_per_lot=0, slippage_price=0):
     now=now or datetime.now(timezone.utc)
     if now.tzinfo is None: raise DataError('UTC-aware now required')
     today=now.astimezone(timezone.utc).date().isoformat()
@@ -31,7 +32,7 @@ def assess(plan, meta, balance, risk_pct, records=(), max_daily_risk_pct=3,
     reasons+=check['reasons']
     try:
         sized=size_lots(capital,risk_pct,plan['entry'],plan['stop_loss'],meta,calc_profit,
-                        plan['direction'],account_currency)
+                        plan['direction'],account_currency,commission_per_lot,slippage_price)
         if daily_planned+sized['estimated_risk']>capital*finite(max_daily_risk_pct,'max_daily_risk_pct')/100:
             reasons.append('daily planned risk limit')
     except (DataError,KeyError) as exc:
