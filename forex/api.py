@@ -132,3 +132,21 @@ def scanner_route(symbols:str='XAUUSD',timeframes:str='M15'):
     if not syms or not tfs or len(syms)*len(tfs)>24 or any(x not in SYMBOLS for x in syms) or any(x not in TIMEFRAMES for x in tfs):
         raise HTTPException(422,{'status':'ERROR','reason':'invalid scanner symbols/timeframes or pair limit'})
     return scan(provider(),syms,tfs)
+
+class StrategyBacktestRequest(BaseModel):
+    symbol: Literal['XAUUSD','EURUSD','GBPUSD','USDJPY']
+    timeframe: Literal['M5','M15','M30','H1','H4','D1']='M15'
+    count: int=Field(ge=220,le=2000)
+    spread: float=Field(ge=0)
+    commission: float=Field(ge=0,default=0)
+    slippage: float=Field(ge=0,default=0)
+    holdout: float=Field(gt=0,lt=.5,default=.25)
+    seed: int=19
+
+@app.post('/api/v1/strategy-backtests')
+def strategy_backtests(req:StrategyBacktestRequest):
+    from .research import strategy_backtest
+    p=provider()
+    result=call(lambda: strategy_backtest(p.candles(req.symbol,req.timeframe,req.count),
+                        req.spread,req.commission,req.slippage,req.holdout,req.seed))
+    return {'result':result,'provider':p.name,'data_status':'OK'}

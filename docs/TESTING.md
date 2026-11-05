@@ -7,3 +7,5 @@ V2 doğrulaması: `python3 -m unittest discover -s tests -q` ile 334 test geçti
 V3 seans aşaması: 338 test geçiyor. Dört yeni test Londra DST, Londra/New York kesişimi, hafta sonu, işlem izni ve açık saat politikasını kapsar.
 
 V3 scanner aşaması: 341 test geçti. Scanner kısmi başarısızlık, strateji oyları ve ek API rotaları test edildi.
+
+V3 araştırma aşaması: 346 test geçti. Çoklu işlem, kronolojik giriş, holdout, deterministik bootstrap, istek sınırı ve ters gap kaybı doğrulandı.

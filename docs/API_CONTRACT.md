@@ -29,3 +29,5 @@ Tek işlem tekrar oynatma yanıtında `result.status` değeri `STOP`, `TARGET` v
 ## V3 ek rotalar
 
 `GET /api/v1/sessions/{symbol}` UTC zaman damgası, bilgilendirici global seanslar ve broker durumunu döndürür. `GET /api/v1/strategies` aktif üç strateji adını listeler. `GET /api/v1/scanner?symbols=XAUUSD,EURUSD&timeframes=M15,H1` en fazla 24 çiftin sıralı `results` ve ayrı `errors` listesini döndürür. Geçersiz sembol, zaman dilimi veya sınır aşımı 422'dir. Sinyal yanıtında geriye uyumlu alanlara ek olarak `strategies` ve `session` bulunabilir.
+
+`POST /api/v1/strategy-backtests`: `symbol`, `timeframe` (varsayılan M15), `count` (220..2000), `spread`, `commission`, `slippage`, `holdout` (0..0.5), `seed` alır. Yanıt `result.trades`, `open_position`, `metrics`, `development`, `holdout`, `holdout_start_time`, `monte_carlo`, `policy`, `entry_assumption`, `provider`, `data_status` içerir. 422 veri veya limit hatasıdır. Bu araştırma çıktısı canlı emir veya doğrulanmış strateji başarısı değildir.

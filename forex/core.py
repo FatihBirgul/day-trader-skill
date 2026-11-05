@@ -52,13 +52,23 @@ def atr(bars, n=14):
     value, count = exit_planner.atr_of(converted, n)
     return value if count == n else None
 
+def ema_series(values, n):
+    if len(values)<n: return []
+    current=sum(values[:n])/n
+    out=[current]
+    alpha=2/(n+1)
+    for value in values[n:]:
+        current+=(value-current)*alpha
+        out.append(current)
+    return out
+
 def indicators(bars):
     closes = [b['close'] for b in bars]
     if len(closes) < 200:
         raise DataError('at least 200 closed candles required')
-    e12, e26 = ema(closes, 12), ema(closes, 26)
-    macd_line = e12-e26
-    macd_series = [ema(closes[:i], 12)-ema(closes[:i], 26) for i in range(26,len(closes)+1)]
+    e12, e26 = ema_series(closes,12), ema_series(closes,26)
+    macd_series = [a-b for a,b in zip(e12[14:],e26)]
+    macd_line = macd_series[-1]
     signal = ema(macd_series,9)
     mid = sum(closes[-20:])/20
     std = (sum((x-mid)**2 for x in closes[-20:])/20)**.5
