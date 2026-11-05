@@ -186,6 +186,9 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
         meta=provider.metadata(symbol)
         quote=provider.quote(symbol)
         if not meta or not quote: raise DataError('quote or metadata unavailable')
+        for key in ('contract_size','tick_size','tick_value','point','volume_min','volume_max','volume_step'):
+            if finite(meta.get(key),key)<=0: raise DataError('invalid '+key)
+        if not meta.get('account_currency'): raise DataError('account currency unavailable')
         session=session_snapshot(datetime.fromtimestamp(now,timezone.utc), symbol, meta.get('trade_allowed'), meta.get('broker_hours'))
         base['session']=session
         if session['broker']['status'] not in ('OPEN','CLOSING_SOON'):

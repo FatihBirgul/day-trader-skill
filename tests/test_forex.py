@@ -208,3 +208,10 @@ class MetadataSafety(unittest.TestCase):
         result=analyze(p,'XAUUSD',now=NOW)
         self.assertEqual(result['data_status'],'DATA_UNAVAILABLE')
         self.assertIsNone(result['plan'])
+
+class PlanMetadata(unittest.TestCase):
+    def test_missing_contract_blocks_plan(self):
+        p=fixture();p.data['XAUUSD']['metadata'].pop('contract_size')
+        result=analyze(p,'XAUUSD',now=NOW)
+        self.assertEqual(result['data_status'],'DATA_UNAVAILABLE')
+        self.assertIsNone(result['plan'])
