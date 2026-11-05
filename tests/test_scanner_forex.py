@@ -23,3 +23,17 @@ class Scanner(unittest.TestCase):
         self.assertEqual(client.get('/api/v1/scanner?symbols=XAUUSD').status_code,200)
         self.assertEqual(client.get('/api/v1/scanner?symbols=BAD').status_code,422)
         app.state.provider=None
+
+class PullbackTiming(unittest.TestCase):
+    def test_prior_touch_uses_prior_ema(self):
+        from unittest.mock import patch
+        from forex import strategies
+        bars=[{'open':100,'high':101,'low':99,'close':100} for _ in range(30)]
+        bars[-2]={'open':101,'high':102,'low':100.5,'close':101}
+        bars[-1]={'open':102,'high':104,'low':102,'close':103}
+        metrics={'ema20':102,'ema50':100,'ema200':99,'rsi14':60,'macd':1,
+                 'macd_signal':0}
+        # Current EMA20 would make prev.low<=102 true. Prior EMA20 is near 100,
+        # so this is not a valid touch of the previously known average.
+        votes=strategies.candidates(bars,metrics)
+        self.assertFalse(any(v['strategy']=='pullback' for v in votes))

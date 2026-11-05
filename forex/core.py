@@ -277,7 +277,10 @@ def backtest(bars, direction, entry_price, stop, target, spread=0, price_basis='
             stamp=finite(bar['time'],'time')
             if previous_time is not None and stamp<=previous_time: raise DataError('non-monotonic candle time')
             previous_time=stamp
-        if i==0: continue
+        if i==0:
+            if abs(c-entry_price)>max(1e-9,abs(entry_price)*1e-9):
+                raise DataError('entry reference must equal first closed candle')
+            continue
         result=exit_on_bar(model,bar)
         if result:
             net=result['net_r']

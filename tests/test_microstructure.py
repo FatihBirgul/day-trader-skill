@@ -30,3 +30,9 @@ class Microstructure(unittest.TestCase):
         b=backtest(bars,'BUY',100,99,102,.2)
         self.assertGreater(a['result_r'],b['result_r'])
         self.assertEqual(b['price_basis'],'bid')
+
+class EntryReference(unittest.TestCase):
+    def test_single_plan_requires_known_first_close(self):
+        bars=[{'open':100,'high':100,'low':100,'close':100},
+              {'open':100,'high':102,'low':100,'close':101}]
+        with self.assertRaises(DataError): backtest(bars,'BUY',101,99,102,.1)

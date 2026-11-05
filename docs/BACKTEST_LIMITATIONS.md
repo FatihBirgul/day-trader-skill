@@ -13,3 +13,5 @@ V3 sabit kural kayan değerlendirmesi `walk_forward` ile 2..5 ardışık pencere
 V4 fiyat modeli: OHLC ve grafik seviyeleri aynı `price_basis` (`bid` veya `mid`) taşır. Varsayılan `bid` MT5 geçmiş mumları içindir. Sabit spread kullanılır; tarihsel dinamik spread henüz yok. BUY/SELL uygulanabilir giriş ve çıkış fiyatları ortak `microstructure` hesabından gelir. Gerçek tick sırası, fill, likidite ve kısmi gerçekleşme doğrulanmadı.
 
 V4 düzeltmesi: `strategy_comparison` artık yalnızca kombine işlemleri etiketlere ayırmaz; her stratejinin sinyalini ve pozisyon durumunu bağımsız tekrar oynatır. Önceki V3 etiket karşılaştırması açıklaması tarihsel davranıştır, güncel API sonucu değildir.
+
+V4 tek plan replay için `entry` seçilen fiyat temelindeki ilk kapanmış mum kapanışına eşit olmalıdır. Eşleşmeyen talep reddedilir; bu koşul gerçek fill'i doğrulamaz.
