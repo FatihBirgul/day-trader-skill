@@ -5,3 +5,5 @@
 `MT5_SYMBOL_MAP` kanonik sembolü brokerın tam adına eşler. Adın içinde XAUUSD/EURUSD/GBPUSD/USDJPY bulunmalı; broker base/profit currency alanları varsa bunlar da uyuşmalıdır. `MT5_BROKER_HOURS` açık işlem saati politikasıdır. `MT5_MAX_SPREAD` örneği: `{"XAUUSD":0.5,"EURUSD":0.0002}`. Bu değerler broker doğrulaması olmadan varsayılmaz. Üçü de JSON ortam değişkenidir; şifre içermez. Eksik saat veya spread politikasıyla yeni işlem planı üretilmez. Bunlar brokerın gerçekten emir kabul edeceğinin garantisi değildir.
 
 `forex.mt5_diagnostic` gerçek Windows demo terminalinde bağlantı ve veri kontrolü için salt okunur tanılama komutudur. Terminal erişimi yoksa açık `DATA_UNAVAILABLE` raporlar.
+
+V4: MT5 kütüphane istisnaları `DataError` olarak normalize edilir; bağlantı durumu düşürülür. Terminal kopunca yeniden bağlanma denenir. MT5 erişimi kilitle serileştirilir. Fixture dönüşleri kopyalanır; testler arası veri değişikliği yayılmaz. Gerçek Windows terminalinde eşzamanlı çağrı davranışı yine doğrulanmalıdır.

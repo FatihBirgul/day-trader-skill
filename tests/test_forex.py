@@ -216,3 +216,36 @@ class PlanMetadata(unittest.TestCase):
         result=analyze(p,'XAUUSD',now=NOW)
         self.assertEqual(result['data_status'],'DATA_UNAVAILABLE')
         self.assertIsNone(result['plan'])
+
+class ProviderReliability(unittest.TestCase):
+    def test_mt5_exception_is_normalized(self):
+        from forex.providers import MT5Provider
+        class Explodes(FakeMT5):
+            def symbol_info_tick(self,s): raise RuntimeError('library error')
+        p=MT5Provider(Explodes(),{'XAUUSD':'XAUUSD.r'})
+        with self.assertRaises(DataError): p.quote('XAUUSD')
+        self.assertFalse(p.connected)
+    def test_fixture_return_values_are_isolated(self):
+        p=fixture()
+        p.metadata('XAUUSD')['contract_size']=999
+        p.quote('XAUUSD')['bid']=0
+        p.candles('XAUUSD','M15')[0]['close']=0
+        self.assertEqual(p.metadata('XAUUSD')['contract_size'],100)
+        self.assertGreater(p.quote('XAUUSD')['bid'],0)
+        self.assertGreater(p.candles('XAUUSD','M15')[0]['close'],0)
+    def test_parallel_quote_calls_are_serialized(self):
+        from forex.providers import MT5Provider
+        from concurrent.futures import ThreadPoolExecutor
+        from types import SimpleNamespace
+        import time
+        class Slow(FakeMT5):
+            def __init__(self):self.active=0;self.high=0
+            def symbol_info_tick(self,s):
+                self.active+=1;self.high=max(self.high,self.active)
+                time.sleep(.001)
+                self.active-=1
+                return SimpleNamespace(bid=1,ask=1.1,time_msc=int(time.time()*1000))
+        mt=Slow();p=MT5Provider(mt,{'XAUUSD':'XAUUSD.r'})
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            list(pool.map(p.quote,['XAUUSD']*8))
+        self.assertEqual(mt.high,1)

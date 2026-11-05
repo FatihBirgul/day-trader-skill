@@ -3,15 +3,16 @@ from __future__ import annotations
 import threading
 import os
 import json
+import copy
 from datetime import datetime, timezone
 from .core import DataError, SYMBOLS, TIMEFRAMES, finite, validate_bars
 
 class FixtureProvider:
     name='fixture-test-only'
     def __init__(self, data): self.data=data
-    def metadata(self,symbol): return self.data[symbol]['metadata']
-    def quote(self,symbol): return self.data[symbol]['quote']
-    def candles(self,symbol,timeframe,count=220): return self.data[symbol]['candles'][timeframe][-count:]
+    def metadata(self,symbol): return copy.deepcopy(self.data[symbol]['metadata'])
+    def quote(self,symbol): return copy.deepcopy(self.data[symbol]['quote'])
+    def candles(self,symbol,timeframe,count=220): return copy.deepcopy(self.data[symbol]['candles'][timeframe][-count:])
     def loss_for(self,symbol,side,lots,entry,stop):
         m=self.metadata(symbol)
         return (stop-entry)*(1 if side=='BUY' else -1)*lots*m['tick_value']/m['tick_size']
@@ -38,31 +39,39 @@ class MT5Provider:
         if not isinstance(self.max_spread,dict): raise DataError('invalid MT5_MAX_SPREAD')
         self.mt5=mt5; self.lock=threading.RLock(); self.mappings=mappings
         self.connected=False
+    def _call(self, name, *args):
+        try: return getattr(self.mt5,name)(*args)
+        except Exception as exc:
+            self.connected=False
+            raise DataError(f'MT5 {name} failed') from exc
     def connect(self):
         with self.lock:
             if self.connected and hasattr(self.mt5, 'terminal_info'):
-                terminal = self.mt5.terminal_info()
+                terminal = self._call('terminal_info')
                 if terminal is None or not getattr(terminal, 'connected', False):
-                    self.mt5.shutdown()
+                    try: self._call('shutdown')
+                    except DataError: pass
                     self.connected = False
             if not self.connected:
-                if not self.mt5.initialize(): raise DataError(f'MT5 initialize failed: {self.mt5.last_error()}')
+                if not self._call('initialize'): raise DataError(f'MT5 initialize failed: {self._call('last_error')}')
                 self.connected=True
     def health(self):
         with self.lock:
             self.connect()
-            terminal = self.mt5.terminal_info() if hasattr(self.mt5, 'terminal_info') else None
+            terminal = self._call('terminal_info') if hasattr(self.mt5, 'terminal_info') else None
             if terminal is None or not getattr(terminal, 'connected', False):
                 raise DataError('MT5 terminal disconnected')
             return {'connected':True,'trade_allowed':bool(getattr(terminal,'trade_allowed',False))}
     def close(self):
         with self.lock:
-            if self.connected: self.mt5.shutdown(); self.connected=False
+            if self.connected:
+                try: self._call('shutdown')
+                finally: self.connected=False
     def _symbol(self, symbol):
         if symbol not in SYMBOLS: raise DataError('unsupported symbol')
         self.connect()
         actual=self.mappings.get(symbol,symbol)
-        info=self.mt5.symbol_info(actual)
+        info=self._call('symbol_info',actual)
         if info is None or not actual or not isinstance(actual,str):
             raise DataError('broker symbol mapping unverified')
         # An alias is trusted only when explicitly configured and resolves to an exact MT5 name.
@@ -73,12 +82,12 @@ class MT5Provider:
         base,profit=getattr(info,'currency_base',None),getattr(info,'currency_profit',None)
         if base and profit and (base.upper()!=symbol[:3] or profit.upper()!=symbol[3:]):
             raise DataError('broker instrument currencies mismatch')
-        if not self.mt5.symbol_select(actual,True): raise DataError('symbol_select failed')
+        if not self._call('symbol_select',actual,True): raise DataError('symbol_select failed')
         return actual,info
     def metadata(self,symbol):
         with self.lock:
             actual,i=self._symbol(symbol)
-            account=self.mt5.account_info()
+            account=self._call('account_info')
             if account is None: raise DataError('MT5 account unavailable')
             required=('trade_contract_size','trade_tick_size','trade_tick_value','point','volume_min','volume_max','volume_step','trade_stops_level')
             if any(not hasattr(i,key) for key in required): raise DataError('incomplete broker metadata')
@@ -86,6 +95,9 @@ class MT5Provider:
             return {'symbol':symbol,'broker_symbol':actual,'asset_type':'metal' if symbol=='XAUUSD' else 'forex',
                     'source':'mt5','digits':getattr(i,'digits',None),
                     'freeze_level':getattr(i,'trade_freeze_level',None),
+                    'tick_value_profit':getattr(i,'trade_tick_value_profit',None),
+                    'tick_value_loss':getattr(i,'trade_tick_value_loss',None),
+                    'broker_server':getattr(account,'server',None),
                     'max_spread':self.max_spread.get(symbol),
                     'contract_size':i.trade_contract_size,
                     'tick_size':i.trade_tick_size,'tick_value':i.trade_tick_value,
@@ -97,7 +109,7 @@ class MT5Provider:
                     'tick_value_currency':getattr(account,'currency',None) if account else None}
     def quote(self,symbol):
         with self.lock:
-            actual,_=self._symbol(symbol); t=self.mt5.symbol_info_tick(actual)
+            actual,_=self._symbol(symbol); t=self._call('symbol_info_tick',actual)
             if t is None: raise DataError('tick unavailable')
             stamp=t.time_msc/1000 if getattr(t,'time_msc',0) else t.time
             bid,ask=finite(t.bid,'bid'),finite(t.ask,'ask')
@@ -112,7 +124,7 @@ class MT5Provider:
         with self.lock:
             actual,_=self._symbol(symbol)
             tf=getattr(self.mt5,'TIMEFRAME_'+timeframe)
-            rows=self.mt5.copy_rates_from_pos(actual,tf,0,count+1)
+            rows=self._call('copy_rates_from_pos',actual,tf,0,count+1)
             if rows is None: raise DataError('candles unavailable')
             now=datetime.now(timezone.utc).timestamp()
             # MT5 bar timestamp marks the OPEN; omit current unfinished bar.
@@ -133,6 +145,6 @@ class MT5Provider:
         with self.lock:
             actual,_=self._symbol(symbol)
             typ=self.mt5.ORDER_TYPE_BUY if side=='BUY' else self.mt5.ORDER_TYPE_SELL
-            result=self.mt5.order_calc_profit(typ,actual,lots,entry,stop)
+            result=self._call('order_calc_profit',typ,actual,lots,entry,stop)
             if result is None: raise DataError('order_calc_profit failed')
             return result
