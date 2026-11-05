@@ -96,3 +96,28 @@ class MT5Adapter(unittest.TestCase):
     def test_unverified_mapping_blocks(self):
         from forex.providers import MT5Provider
         with self.assertRaises(DataError): MT5Provider(FakeMT5()).metadata('XAUUSD')
+
+class MoreForex(unittest.TestCase):
+    def test_sell_signal(self):
+        p=fixture()
+        for tf in ('M15','H4'):
+            for i,b in enumerate(p.data['XAUUSD']['candles'][tf]):
+                c=2100-i*.1-(5 if i==219 else 0)
+                b.update(open=c+.05,high=c+.2,low=c-.1,close=c)
+        p.data['XAUUSD']['quote'].update(bid=2073,ask=2073.2)
+        result=analyze(p,'XAUUSD',now=NOW)
+        self.assertEqual(result['signal'],'SELL')
+        self.assertGreater(result['plan']['stop_loss'],result['plan']['entry'])
+        self.assertLess(result['plan']['take_profit_1'],result['plan']['entry'])
+    def test_precision_and_wrong_stop(self):
+        from forex.core import price_round
+        self.assertEqual(price_round(1.23456,.00001,'down'),1.23456)
+        self.assertEqual(price_round(150.123,.001,'up'),150.123)
+        with self.assertRaises(DataError): size_lots(10000,1,2000,2001,META)
+    def test_api_validation(self):
+        app.state.provider=fixture()
+        client=TestClient(app)
+        self.assertEqual(client.get('/api/v1/candles/XAUUSD?count=10001').status_code,422)
+        self.assertEqual(client.get('/api/v1/analysis/BAD').status_code,422)
+        self.assertEqual(client.post('/api/v1/backtests',json={'symbol':'XAUUSD','direction':'BUY','entry':1,'stop_loss':.5,'take_profit':2,'spread':0,'count':10001}).status_code,422)
+        app.state.provider=None

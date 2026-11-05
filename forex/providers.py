@@ -1,6 +1,8 @@
 """Read-only MT5 and explicitly labelled fixture data providers."""
 from __future__ import annotations
 import threading
+import os
+import json
 from datetime import datetime, timezone
 from .core import DataError, SYMBOLS, TIMEFRAMES
 
@@ -20,7 +22,13 @@ class MT5Provider:
         if mt5 is None:
             try: import MetaTrader5 as mt5
             except ImportError: raise DataError('MetaTrader5 package unavailable; Windows terminal required')
-        self.mt5=mt5; self.lock=threading.RLock(); self.mappings=mappings or {}
+        if mappings is None:
+            raw=os.environ.get('MT5_SYMBOL_MAP','{}')
+            try: mappings=json.loads(raw)
+            except json.JSONDecodeError: raise DataError('MT5_SYMBOL_MAP must be JSON')
+            if not isinstance(mappings,dict) or any(k not in SYMBOLS or not isinstance(v,str) for k,v in mappings.items()):
+                raise DataError('invalid MT5_SYMBOL_MAP')
+        self.mt5=mt5; self.lock=threading.RLock(); self.mappings=mappings
         self.connected=False
     def connect(self):
         with self.lock:
