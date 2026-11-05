@@ -53,7 +53,7 @@ class MT5Provider:
                     except DataError: pass
                     self.connected = False
             if not self.connected:
-                if not self._call('initialize'): raise DataError(f'MT5 initialize failed: {self._call('last_error')}')
+                if not self._call('initialize'): raise DataError(f"MT5 initialize failed: {self._call('last_error')}")
                 self.connected=True
     def health(self):
         with self.lock:
