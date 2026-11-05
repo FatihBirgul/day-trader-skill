@@ -5,9 +5,11 @@ from .core import DataError, finite, indicators, price_round, timemachine
 from .strategies import candidates,resolve
 from .microstructure import executable_prices, exit_on_bar
 
-def strategy_backtest(bars, spread, commission=0, slippage=0, holdout=0.25, seed=19, price_basis='bid'):
+def strategy_backtest(bars, spread, commission=0, slippage=0, holdout=0.25, seed=19, price_basis='bid', strategy=None, compare=True):
     """Generate on closed bar i; assume fill at open i+1; one position at a time."""
     n=len(bars)
+    if strategy not in (None,'trend_following','breakout','pullback'):
+        raise DataError('unknown strategy')
     if price_basis not in ('bid','mid'): raise DataError('unknown candle price basis')
     if not 220<=n<=2000 or not 0<holdout<.5:
         raise DataError('220..2000 candles and holdout between 0 and 0.5 required')
@@ -27,6 +29,7 @@ def strategy_backtest(bars, spread, commission=0, slippage=0, holdout=0.25, seed
         if position is None:
             metrics=indicators(bars[:i]) # only candles closed before entry bar
             votes=candidates(bars[:i],metrics)
+            if strategy is not None: votes=[v for v in votes if v['strategy']==strategy]
             close=bars[i-1]['close']
             higher='BUY' if close>metrics['ema50']>metrics['ema200'] else 'SELL' if close<metrics['ema50']<metrics['ema200'] else 'WAIT'
             direction,_=resolve(votes,higher)
@@ -49,12 +52,17 @@ def strategy_backtest(bars, spread, commission=0, slippage=0, holdout=0.25, seed
                        'outcome':result['outcome'],'exit_price':result['exit_price'],
                        'r':result['net_r'],'holding_bars':i-position['entry_index']+1})
         position=None
+    comparisons={}
+    if compare and strategy is None:
+        for name in ('trend_following','breakout','pullback'):
+            separate=strategy_backtest(bars,spread,commission,slippage,holdout,seed,price_basis,
+                                       strategy=name,compare=False)
+            comparisons[name]={'metrics':separate['metrics'],'trades':separate['trades']}
     return {'trades':trades,'open_position':position,'metrics':_metrics(trades,exposure,n-200),
             'development':_metrics([t for t in trades if t['entry_index']<split],0,0),
             'holdout':_metrics([t for t in trades if t['entry_index']>=split],0,0),
             'holdout_start_time':bars[split]['time'],
-            'strategy_comparison':{name:_metrics([t for t in trades if name in t['strategy']],0,0)
-                                   for name in ('trend_following','breakout','pullback')},
+            'strategy_comparison':comparisons,
             'monte_carlo':_bootstrap(trades,seed),
             'policy':'stop_first','entry_assumption':'next_bar_open','price_basis':price_basis,
             'spread_assumption':spread,'seed':seed}
@@ -92,7 +100,7 @@ def walk_forward(bars, spread, folds=3, **kwargs):
     for fold in range(folds):
         start=220+fold*span
         end=220+(fold+1)*span if fold<folds-1 else len(bars)
-        result=strategy_backtest(bars[:end],spread,**kwargs)
+        result=strategy_backtest(bars[:end],spread,compare=False,**kwargs)
         trades=[t for t in result['trades'] if start<=t['entry_index']<end]
         windows.append({'fold':fold+1,'train_end_index':start-1,'test_start_index':start,
                         'test_end_index':end-1,'metrics':_metrics(trades,0,0),

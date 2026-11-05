@@ -52,8 +52,9 @@ class GapPolicy(unittest.TestCase):
 class StrategyComparison(unittest.TestCase):
     def test_comparison_counts_tags(self):
         result=strategy_backtest(series(),.02)
-        for name,metrics in result['strategy_comparison'].items():
-            self.assertEqual(metrics['trade_count'],sum(name in t['strategy'] for t in result['trades']))
+        for name,report in result['strategy_comparison'].items():
+            self.assertEqual(report['metrics']['trade_count'],len(report['trades']))
+            self.assertTrue(all(name in t['strategy'] for t in report['trades']))
 
 class RollingEvaluation(unittest.TestCase):
     def test_chronological_windows(self):

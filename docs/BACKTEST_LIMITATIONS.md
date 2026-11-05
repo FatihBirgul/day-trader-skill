@@ -11,3 +11,5 @@ V3 strateji karşılaştırması, bir işlemin sinyalinde bulunan strateji etike
 V3 sabit kural kayan değerlendirmesi `walk_forward` ile 2..5 ardışık pencere üretir. Her pencerenin eğitim bitişi test başlangıcından öncedir ve veri o pencerenin sonuna kadar kesilir. Parametre seçimi veya yeniden eğitim yapılmaz; bu tam strateji optimizasyonu walk-forward değildir. Gelecek mumlar geçmiş işlem sonuçlarını değiştirmemelidir; test bunu doğrular.
 
 V4 fiyat modeli: OHLC ve grafik seviyeleri aynı `price_basis` (`bid` veya `mid`) taşır. Varsayılan `bid` MT5 geçmiş mumları içindir. Sabit spread kullanılır; tarihsel dinamik spread henüz yok. BUY/SELL uygulanabilir giriş ve çıkış fiyatları ortak `microstructure` hesabından gelir. Gerçek tick sırası, fill, likidite ve kısmi gerçekleşme doğrulanmadı.
+
+V4 düzeltmesi: `strategy_comparison` artık yalnızca kombine işlemleri etiketlere ayırmaz; her stratejinin sinyalini ve pozisyon durumunu bağımsız tekrar oynatır. Önceki V3 etiket karşılaştırması açıklaması tarihsel davranıştır, güncel API sonucu değildir.

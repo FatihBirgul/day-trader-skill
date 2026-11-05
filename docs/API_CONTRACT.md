@@ -41,3 +41,5 @@ V3 MT5 yapılandırması: `/symbols/{symbol}/metadata` artık `asset_type`, `sou
 `POST /api/v1/walk-forward` araştırma backtest gövdesine ek `folds` (2..5) alır, `count` 260..2000 olmalıdır. `result.method=fixed_rules_rolling_evaluation`; her fold eğitim bitişi, test aralığı, işlemler ve metrikleri içerir. Parametre optimizasyonu olmadığı açıkça belirtilir.
 
 V4 geriye uyumlu ek alan: `/backtests`, `/strategy-backtests` ve `/walk-forward` isteklerinde `price_basis` `bid` veya `mid` olabilir; alan yoksa `bid` kullanılır. Gönderilen entry/stop/target ve OHLC aynı grafik fiyat temelinde olmalıdır. Bilinmeyen temel 422 döndürür. `result.price_basis` ve `spread_assumption` hesap varsayımını açıklar.
+
+V4 karşılaştırma gövdesi: `strategy_comparison.{trend_following|breakout|pullback}` artık her stratejinin bağımsız `metrics` ve `trades` alanını içerir. Önceki sürümde alt alan doğrudan metrikti; PWA `strategy_comparison[name].metrics` yoluna geçmelidir.
