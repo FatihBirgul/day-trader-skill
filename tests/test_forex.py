@@ -166,3 +166,31 @@ class FinancialSafety(unittest.TestCase):
         app.state.provider=MT5Provider(FakeMT5(),{'XAUUSD':'XAUUSD.r'})
         self.assertEqual(TestClient(app).get('/api/v1/health').status_code,503)
         app.state.provider=None
+
+class ProviderFailures(unittest.TestCase):
+    def test_missing_metadata_is_rejected(self):
+        from forex.providers import MT5Provider
+        class Broken(FakeMT5):
+            def symbol_info(self,s):
+                from types import SimpleNamespace
+                return SimpleNamespace(point=.01)
+        with self.assertRaises(DataError): MT5Provider(Broken(),{'XAUUSD':'XAUUSD.r'}).metadata('XAUUSD')
+    def test_disconnect_reinitializes(self):
+        from forex.providers import MT5Provider
+        from types import SimpleNamespace
+        class Reconnect(FakeMT5):
+            def __init__(self): self.inits=0;self.connected=False
+            def initialize(self): self.inits+=1;self.connected=True;return True
+            def shutdown(self): self.connected=False
+            def terminal_info(self): return SimpleNamespace(connected=self.connected,trade_allowed=True)
+        mt=Reconnect();p=MT5Provider(mt,{'XAUUSD':'XAUUSD.r'})
+        self.assertTrue(p.health()['connected'])
+        mt.connected=False
+        self.assertTrue(p.health()['connected'])
+        self.assertEqual(mt.inits,2)
+    def test_stale_tick_rejected(self):
+        from forex.providers import MT5Provider
+        from types import SimpleNamespace
+        class OldTick(FakeMT5):
+            def symbol_info_tick(self,s): return SimpleNamespace(bid=1,ask=1.1,time_msc=1000)
+        with self.assertRaises(DataError): MT5Provider(OldTick(),{'XAUUSD':'XAUUSD.r'}).quote('XAUUSD')
