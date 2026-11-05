@@ -196,7 +196,8 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
         if now-qt > 120 or qt>now+5: raise DataError('stale tick')
         spread=ask-bid
         meta={**meta,'spread':spread}
-        max_spread=finite(meta.get('max_spread',float(meta['point'])*100),'max_spread')
+        max_spread=finite(meta.get('max_spread'),'max_spread')
+        if max_spread<=0: raise DataError('invalid max_spread')
         if spread > max_spread: raise DataError('spread exceeds limit')
         bars=provider.candles(symbol,timeframe,220)
         last=validate_bars(bars,timeframe,now)

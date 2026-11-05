@@ -9,3 +9,5 @@ V2 geçişi: Analiz veri yokluğu ve stale durumunda HTTP 503 döner; önceki JS
 V3: Seans rozetleri için `/sessions/{symbol}`, çoklu tarama için `/scanner`, strateji adları için `/strategies` kullanın. `session.broker.status=UNKNOWN` olduğunda canlı işlem planı sunulmaz. `scanner.errors` her başarısız sembol/zaman çifti için ayrı gösterilmelidir.
 
 V3 risk politikası `/risk/policy` ile çağrılabilir. `records_source=caller_supplied_manual` kaydı gerçekte brokerdan çekilmiş açık pozisyon olarak sunmayın. `/alerts/{symbol}` olayları yalnızca backend uyarılarıdır, push bildirim değildir. Haber/takvim alanları kaynaksızken `DATA_UNAVAILABLE` kalır.
+
+V3 canlı MT5 kurulumu için `MT5_MAX_SPREAD` ve `MT5_BROKER_HOURS` yapılandırması gerekir. Bunlar girilmeden analizin BUY/SELL planı üretmemesi beklenen güvenli davranıştır. `docs/PROVIDER_ARCHITECTURE.md` örnekleri içerir.

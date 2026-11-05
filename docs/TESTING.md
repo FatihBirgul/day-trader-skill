@@ -13,3 +13,5 @@ V3 araştırma aşaması: 346 test geçti. Çoklu işlem, kronolojik giriş, hol
 V3 bilgi ve risk aşaması: 352 test geçti. RSS ayrıştırma eski News Skill işleviyle, olay filtreleme, uyarı cooldown ve manuel risk politikası test edildi.
 
 V3 gösterge aşaması: 354 test geçti. Wilder RSI referansı, sabit seri, MACD ve yetersiz veri denetlendi.
+
+V3 metadata aşaması: 356 test geçti. Yanlış sembol eşlemesi ve eksik spread politikasıyla plan üretmeme test edildi.

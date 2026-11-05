@@ -194,3 +194,17 @@ class ProviderFailures(unittest.TestCase):
         class OldTick(FakeMT5):
             def symbol_info_tick(self,s): return SimpleNamespace(bid=1,ask=1.1,time_msc=1000)
         with self.assertRaises(DataError): MT5Provider(OldTick(),{'XAUUSD':'XAUUSD.r'}).quote('XAUUSD')
+
+class MetadataSafety(unittest.TestCase):
+    def test_wrong_mapped_instrument(self):
+        from forex.providers import MT5Provider
+        class Wrong(FakeMT5):
+            def symbol_info(self,s):
+                from types import SimpleNamespace
+                return SimpleNamespace(currency_base='EUR',currency_profit='USD')
+        with self.assertRaises(DataError): MT5Provider(Wrong(),{'XAUUSD':'EURUSD.r'}).metadata('XAUUSD')
+    def test_explicit_spread_policy_required_for_signal(self):
+        p=fixture();p.data['XAUUSD']['metadata'].pop('max_spread')
+        result=analyze(p,'XAUUSD',now=NOW)
+        self.assertEqual(result['data_status'],'DATA_UNAVAILABLE')
+        self.assertIsNone(result['plan'])

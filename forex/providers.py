@@ -32,6 +32,10 @@ class MT5Provider:
         try: self.hours=json.loads(raw_hours)
         except json.JSONDecodeError: raise DataError('MT5_BROKER_HOURS must be JSON')
         if not isinstance(self.hours,dict): raise DataError('invalid MT5_BROKER_HOURS')
+        raw_spread=os.environ.get('MT5_MAX_SPREAD','{}')
+        try: self.max_spread=json.loads(raw_spread)
+        except json.JSONDecodeError: raise DataError('MT5_MAX_SPREAD must be JSON')
+        if not isinstance(self.max_spread,dict): raise DataError('invalid MT5_MAX_SPREAD')
         self.mt5=mt5; self.lock=threading.RLock(); self.mappings=mappings
         self.connected=False
     def connect(self):
@@ -64,6 +68,11 @@ class MT5Provider:
         # An alias is trusted only when explicitly configured and resolves to an exact MT5 name.
         if actual != symbol and self.mappings.get(symbol) != actual:
             raise DataError('broker symbol mapping unverified')
+        if symbol not in actual.upper():
+            raise DataError('broker symbol does not match canonical instrument')
+        base,profit=getattr(info,'currency_base',None),getattr(info,'currency_profit',None)
+        if base and profit and (base.upper()!=symbol[:3] or profit.upper()!=symbol[3:]):
+            raise DataError('broker instrument currencies mismatch')
         if not self.mt5.symbol_select(actual,True): raise DataError('symbol_select failed')
         return actual,info
     def metadata(self,symbol):
@@ -74,7 +83,11 @@ class MT5Provider:
             required=('trade_contract_size','trade_tick_size','trade_tick_value','point','volume_min','volume_max','volume_step','trade_stops_level')
             if any(not hasattr(i,key) for key in required): raise DataError('incomplete broker metadata')
             if any(finite(getattr(i,key),key) <= 0 for key in required[:-1]): raise DataError('invalid broker metadata')
-            return {'symbol':symbol,'broker_symbol':actual,'contract_size':i.trade_contract_size,
+            return {'symbol':symbol,'broker_symbol':actual,'asset_type':'metal' if symbol=='XAUUSD' else 'forex',
+                    'source':'mt5','digits':getattr(i,'digits',None),
+                    'freeze_level':getattr(i,'trade_freeze_level',None),
+                    'max_spread':self.max_spread.get(symbol),
+                    'contract_size':i.trade_contract_size,
                     'tick_size':i.trade_tick_size,'tick_value':i.trade_tick_value,
                     'point':i.point,'volume_min':i.volume_min,'volume_max':i.volume_max,
                     'volume_step':i.volume_step,'stops_level':i.trade_stops_level,
@@ -91,7 +104,8 @@ class MT5Provider:
             age=datetime.now(timezone.utc).timestamp()-finite(stamp,'tick time')
             if age>120 or age < -5: raise DataError('stale tick')
             if bid<=0 or ask<=bid: raise DataError('invalid bid/ask')
-            return {'symbol':symbol,'bid':bid,'ask':ask,'time':stamp}
+            return {'symbol':symbol,'bid':bid,'ask':ask,'spread':ask-bid,'time':stamp,
+                    'provider':'mt5','freshness':'FRESH'}
     def candles(self,symbol,timeframe,count=220):
         if timeframe not in TIMEFRAMES: raise DataError('invalid timeframe')
         if not 1<=count<=10000: raise DataError('invalid candle count')
