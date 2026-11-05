@@ -85,11 +85,31 @@ def _metrics(trades,exposure,bars):
             'exposure_fraction':exposure/bars if bars else None}
 
 def _bootstrap(trades,seed,draws=200):
+    """Empirical return bootstrap; no predictive probability claim."""
     rs=[t['r'] for t in trades]
-    if not rs: return {'draws':0,'seed':seed,'median_total_r':None}
+    if not rs:
+        return {'draws':0,'seed':seed,'sample_size':0,'method':'trade_return_bootstrap',
+                'median_total_r':None,'p5_total_r':None,'p95_total_r':None,
+                'median_drawdown_r':None,'worst_drawdown_r':None,
+                'median_max_losing_streak':None}
     rng=random.Random(seed)
-    totals=sorted(sum(rng.choice(rs) for _ in rs) for _ in range(draws))
-    return {'draws':draws,'seed':seed,'median_total_r':totals[draws//2]}
+    totals=[];drawdowns=[];streaks=[]
+    for _ in range(draws):
+        equity=peak=dd=0.0;streak=max_streak=0
+        for _ in rs:
+            r=rng.choice(rs)
+            equity+=r;peak=max(peak,equity);dd=max(dd,peak-equity)
+            streak=streak+1 if r<0 else 0
+            max_streak=max(max_streak,streak)
+        totals.append(equity);drawdowns.append(dd);streaks.append(max_streak)
+    totals.sort();drawdowns.sort();streaks.sort()
+    return {'draws':draws,'seed':seed,'sample_size':len(rs),'method':'trade_return_bootstrap',
+            'median_total_r':totals[draws//2],
+            'p5_total_r':totals[int(.05*(draws-1))],
+            'p95_total_r':totals[int(.95*(draws-1))],
+            'median_drawdown_r':drawdowns[draws//2],
+            'worst_drawdown_r':drawdowns[-1],
+            'median_max_losing_streak':streaks[draws//2]}
 
 def walk_forward(bars, spread, folds=3, **kwargs):
     """Fixed-rule rolling evaluation; no parameter fitting or optimization."""

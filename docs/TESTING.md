@@ -35,3 +35,5 @@ V4 provider aşaması: 373 test geçti. Kütüphane hatası, fixture veri yalıt
 V4 as-of aşaması: 375 test geçti. Gelecekteki H4 mumunun atılması, çoklu onay ve daha düşük zaman dilimi reddi test edildi.
 
 V4 piyasa yapısı aşaması: 378 test geçti. Pivot sağ mum onayı, gelecekteki pivotun görünmemesi ve zaman sırası doğrulandı.
+
+V4 bootstrap aşaması: 379 test geçti. Seed tekrarı ve dağılım yüzdelik sırası denetlendi.

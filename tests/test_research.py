@@ -69,3 +69,14 @@ class RollingEvaluation(unittest.TestCase):
         short=strategy_backtest(series(260),.02)['trades']
         long=strategy_backtest(series(300),.02)['trades']
         self.assertEqual(short,[t for t in long if t['exit_index']<260])
+
+class BootstrapDistribution(unittest.TestCase):
+    def test_seed_stability_and_ordered_quantiles(self):
+        from forex.research import _bootstrap
+        trades=[{'r':x} for x in (2,-1,2,-1,-1,2)]
+        a=_bootstrap(trades,7);b=_bootstrap(trades,7)
+        self.assertEqual(a,b)
+        self.assertLessEqual(a['p5_total_r'],a['median_total_r'])
+        self.assertLessEqual(a['median_total_r'],a['p95_total_r'])
+        self.assertGreaterEqual(a['worst_drawdown_r'],a['median_drawdown_r'])
+        self.assertEqual(a['sample_size'],6)
