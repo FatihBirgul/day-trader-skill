@@ -5,3 +5,5 @@
 V2 doğrulaması: `python3 -m unittest discover -s tests -q` ile 334 test geçti, 0 başarısız, 0 atlanan. On yeni test tek kapanış, stop/target sırası, açık sonuç, SELL, spread, zaman sırası, broker kâr işareti, lot grid'i, para birimi ve sağlık bağlantısını kapsar. Gerçek MT5 Windows demo testi hâlâ yapılmadı.
 
 V3 seans aşaması: 338 test geçiyor. Dört yeni test Londra DST, Londra/New York kesişimi, hafta sonu, işlem izni ve açık saat politikasını kapsar.
+
+V3 scanner aşaması: 341 test geçti. Scanner kısmi başarısızlık, strateji oyları ve ek API rotaları test edildi.

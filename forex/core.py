@@ -186,19 +186,22 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
         close=bars[-1]['close']
         trend='BUY' if close>a['ema20']>a['ema50']>a['ema200'] else 'SELL' if close<a['ema20']<a['ema50']<a['ema200'] else 'WAIT'
         higher='BUY' if upper[-1]['close']>b['ema50']>b['ema200'] else 'SELL' if upper[-1]['close']<b['ema50']<b['ema200'] else 'WAIT'
-        breakout=entry.closed_bar_breakout([x['close'] for x in bars[-21:]], [x['high'] for x in bars[-21:]], [x['low'] for x in bars[-21:]])
+        from .strategies import candidates, resolve
+        votes=candidates(bars,a)
+        decision,why=resolve(votes,higher)
         base['indicators']=a
-        base['reasons']=[f'trend={trend}',f'H4={higher}',f'closed-bar breakout={breakout}']
-        if trend==higher==breakout and trend!='WAIT' and ((trend=='BUY' and a['rsi14']>50 and a['macd']>a['macd_signal']) or (trend=='SELL' and a['rsi14']<50 and a['macd']<a['macd_signal'])):
+        base['strategies']=votes
+        base['reasons']=[f'trend={trend}',f'H4={higher}']+why
+        if decision!='WAIT':
             tick=finite(meta.get('tick_size'),'tick_size')
             point=finite(meta.get('point'),'point')
             atrv=a['atr14']
-            ep=ask if trend=='BUY' else bid
+            ep=ask if decision=='BUY' else bid
             stop_dist=max(atrv*1.5,finite(meta.get('stops_level',0),'stops_level')*point+spread+tick)
-            side=1 if trend=='BUY' else -1
+            side=1 if decision=='BUY' else -1
             stop=price_round(ep-side*stop_dist,tick,'down' if side==1 else 'up')
             risk_dist=abs(ep-stop)
-            plan={'symbol':symbol,'direction':trend,'timeframe':timeframe,'entry':ep,'stop_loss':stop,
+            plan={'symbol':symbol,'direction':decision,'timeframe':timeframe,'entry':ep,'stop_loss':stop,
                   'take_profit_1':price_round(ep+side*2*risk_dist,tick,'up' if side==1 else 'down'),
                   'take_profit_2':price_round(ep+side*3*risk_dist,tick,'up' if side==1 else 'down'),
                   'risk_reward':2.0,'invalidation':f'closed candle beyond {stop}',
@@ -206,8 +209,8 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
             verdict=risk_check(plan,meta,max_spread)
             if verdict['decision']=='PASS':
                 if balance is not None:
-                    plan['position_size']=size_lots(balance,risk_pct,ep,stop,meta,(lambda side,lots,e,s: provider.loss_for(symbol,side,lots,e,s)) if hasattr(provider,'loss_for') else getattr(provider,'calc_profit',None),trend,meta.get('account_currency'))
-                base.update(signal=trend,plan=plan)
+                    plan['position_size']=size_lots(balance,risk_pct,ep,stop,meta,(lambda side,lots,e,s: provider.loss_for(symbol,side,lots,e,s)) if hasattr(provider,'loss_for') else getattr(provider,'calc_profit',None),decision,meta.get('account_currency'))
+                base.update(signal=decision,plan=plan)
             else: base['reasons']+=verdict['reasons']
         base['data_status']='OK'
     except DataError as exc:

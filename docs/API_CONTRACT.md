@@ -25,3 +25,7 @@ HTTP 422 geçersiz girdi veya broker veri hatası; 404 provider'da bulunmayan se
 `/api/v1/analysis/{symbol}` ve `/signals/{symbol}` veri durumu `STALE` veya `DATA_UNAVAILABLE` ise önceki 200 yerine HTTP 503 döndürür. JSON gövdesindeki `signal`, `plan`, `data_status`, `provider`, `reasons` korunur. Bu geçişte PWA hem HTTP kodunu hem `data_status` alanını okumalıdır. `/health` MT5 terminalinin `connected` durumunu sorgular; bağlantı yoksa 503, fixture ile çalışıyorsa 200 ve `data_status=TEST_ONLY` döner. Sembol ve zaman dilimi hataları 422 döner. Risk ve backtest için OpenAPI yanıt modelleri eklendi.
 
 Tek işlem tekrar oynatma yanıtında `result.status` değeri `STOP`, `TARGET` veya `OPEN`; `result.trades` kapandıysa 1, açıksa 0'dır. `result.result_r` kapanışta net R, açıkken son mumdaki gerçekleşmemiş R'dir. `outcomes_r` yalnızca kapanmış sonuç içerir. `entry_assumption=filled_at_first_bar_close` giriş dolumunu varsayar; veri bunu ispatlamaz. `policy=stop_first` aynı mum çakışmasını belirtir.
+
+## V3 ek rotalar
+
+`GET /api/v1/sessions/{symbol}` UTC zaman damgası, bilgilendirici global seanslar ve broker durumunu döndürür. `GET /api/v1/strategies` aktif üç strateji adını listeler. `GET /api/v1/scanner?symbols=XAUUSD,EURUSD&timeframes=M15,H1` en fazla 24 çiftin sıralı `results` ve ayrı `errors` listesini döndürür. Geçersiz sembol, zaman dilimi veya sınır aşımı 422'dir. Sinyal yanıtında geriye uyumlu alanlara ek olarak `strategies` ve `session` bulunabilir.

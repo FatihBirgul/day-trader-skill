@@ -6,6 +6,9 @@ from pydantic import BaseModel, Field
 from typing import Literal
 from .core import SYMBOLS, TIMEFRAMES, DataError, analyze, size_lots, backtest
 from .providers import MT5Provider
+from .sessions import session_snapshot
+from .scanner import scan
+from .strategies import STRATEGIES
 
 app=FastAPI(title='Trade AI Forex',version='0.2.0')
 app.state.provider=None
@@ -111,3 +114,21 @@ def calendar(): return {'events':[],'provider':None,'data_status':'DATA_UNAVAILA
 def backtests(req:BacktestRequest):
     return call(lambda: {'result':backtest(provider().candles(req.symbol,req.timeframe,req.count),req.direction,
                 req.entry,req.stop_loss,req.take_profit,req.spread),'provider':provider().name,'data_status':'OK'})
+
+@app.get('/api/v1/sessions/{symbol}')
+def sessions(symbol:Literal['XAUUSD','EURUSD','GBPUSD','USDJPY']):
+    p=provider()
+    m=call(lambda:p.metadata(symbol))
+    return session_snapshot(datetime.now(timezone.utc),symbol,m.get('trade_allowed'),m.get('broker_hours'))
+
+@app.get('/api/v1/strategies')
+def strategies():
+    return {'strategies':STRATEGIES,'version':'v1','provider':None}
+
+@app.get('/api/v1/scanner')
+def scanner_route(symbols:str='XAUUSD',timeframes:str='M15'):
+    syms=tuple(x.strip().upper() for x in symbols.split(',') if x.strip())
+    tfs=tuple(x.strip().upper() for x in timeframes.split(',') if x.strip())
+    if not syms or not tfs or len(syms)*len(tfs)>24 or any(x not in SYMBOLS for x in syms) or any(x not in TIMEFRAMES for x in tfs):
+        raise HTTPException(422,{'status':'ERROR','reason':'invalid scanner symbols/timeframes or pair limit'})
+    return scan(provider(),syms,tfs)
