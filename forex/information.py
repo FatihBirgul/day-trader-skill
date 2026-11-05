@@ -14,6 +14,12 @@ CURRENCIES={'USD':r'\busd\b|\bu\.s\.\b|federal reserve|\bfomc\b|\bnfp\b',
 
 def parse_rss(payload,source,now=None):
     if not source or not isinstance(source,str): raise DataError('source required')
+    if not isinstance(payload,(bytes,str)) or len(payload)>1_000_000:
+        raise DataError('RSS payload too large or invalid')
+    lower=payload.lower()
+    forbidden=(b'<!doctype',b'<!entity') if isinstance(lower,bytes) else ('<!doctype','<!entity')
+    if any(token in lower for token in forbidden):
+        raise DataError('RSS entity declarations are not accepted')
     now=now or datetime.now(timezone.utc)
     try: raw=news_skill.parse_rss(payload,source)
     except Exception as exc: raise DataError('invalid RSS feed') from exc

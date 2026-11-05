@@ -32,3 +32,21 @@ class InformationAPI(unittest.TestCase):
         self.assertEqual(client.get('/api/v1/news').json()['data_status'],'OK')
         self.assertEqual(len(client.get('/api/v1/calendar?symbol=XAUUSD').json()['events']),1)
         app.state.news_items=None;app.state.calendar_events=None
+
+class AlertReliability(unittest.TestCase):
+    def test_event_identity_and_reset(self):
+        engine=AlertEngine(30);now=datetime(2026,11,6,tzinfo=timezone.utc)
+        data={'symbol':'XAUUSD','timeframe':'M15','data_status':'DATA_UNAVAILABLE',
+              'signal':'WAIT','reasons':['MT5 disconnected']}
+        first=engine.evaluate(data,now=now)
+        self.assertEqual(first[0]['type'],'MT5_DISCONNECTED')
+        self.assertTrue(first[0]['id'])
+        self.assertFalse(first[0]['acknowledged'])
+        self.assertEqual(engine.evaluate(data,now=now),[])
+        engine.reset()
+        self.assertEqual(len(engine.evaluate(data,now=now)),1)
+
+class RSSInputBounds(unittest.TestCase):
+    def test_large_or_entity_feed_rejected(self):
+        with self.assertRaises(DataError): parse_rss(b'x'*1_000_001,'fixture')
+        with self.assertRaises(DataError): parse_rss(b'<!DOCTYPE rss [<!ENTITY x "hello">]><rss/>','fixture')
