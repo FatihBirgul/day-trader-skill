@@ -1,0 +1,383 @@
+{
+  "synthetic_public_buy": {
+    "analysis_id": "bf508f3345062f9cab4b94a09eac70dfb175a03ad3c51d63a1c7756b5695c6f8",
+    "schema_version": "forex-analysis-5",
+    "engine_version": "forex-unified-5.1",
+    "source_versions": {
+      "public_core": "forex-unified-5.1",
+      "public_code_sha256": "7a4043d3af5155549676b3d380e90a52bb4a04893dc08c80491d7c67af2ef9e9",
+      "algorithms": {
+        "ema": "sma-seed-1",
+        "rsi14": "legacy-wilder-1",
+        "atr14": "legacy-true-range-sma-1",
+        "macd": "sma-seed-12-26-9-1",
+        "bollinger": "population-std20-2-1",
+        "strategies": "forex-v4-1",
+        "structure": "forex-structure-2"
+      }
+    },
+    "symbol": "XAUUSD",
+    "market_type": "unverified",
+    "contract_type": "unverified",
+    "broker_symbol": "XAUUSD",
+    "provider": "fixture-test-only",
+    "timeframe": "M15",
+    "as_of_utc": "2027-01-15T08:00:00+00:00",
+    "snapshot_id": "88fb6b15a2f25488a48ebb585fa15779951739c7f5db1d9fbca585bb66996ff6",
+    "market_status": "OPEN",
+    "data_status": "OK",
+    "trading_eligibility": "ELIGIBLE",
+    "integration_status": "PUBLIC_CORE_ONLY",
+    "private_extension": {
+      "status": "UNAVAILABLE",
+      "reason": "private extension not configured"
+    },
+    "trend": {
+      "ema20": 1921.4261904761902,
+      "ema50": 1919.646078431372,
+      "ema200": 1911.9997512437794,
+      "ema20_slope": 0.5761904761905043
+    },
+    "momentum": {
+      "rsi14": 100.0,
+      "macd": 1.0988603988605519,
+      "macd_histogram": 0.3190883190884053,
+      "momentum_change": 0.31908831908840507
+    },
+    "volatility": {
+      "atr14": 0.649999999999961,
+      "normalized_atr": 0.0003373293891743012,
+      "bollinger_width": 0.0029407551305071266
+    },
+    "indicators": {
+      "ema9": 1922.5,
+      "ema20": 1921.4261904761902,
+      "ema21": 1921.3545454545451,
+      "ema50": 1919.646078431372,
+      "ema100": 1917.049009900989,
+      "ema200": 1911.9997512437794,
+      "sma20": 1921.2,
+      "sma50": 1919.55,
+      "rsi14": 100.0,
+      "atr14": 0.649999999999961,
+      "normalized_atr": 0.0003373293891743012,
+      "macd": 1.0988603988605519,
+      "macd_signal": 0.7797720797721466,
+      "macd_histogram": 0.3190883190884053,
+      "momentum_change": 0.31908831908840507,
+      "bollinger_upper": 1924.0248893783653,
+      "bollinger_lower": 1918.3751106216348,
+      "bollinger_width": 0.0029407551305071266,
+      "swing_high": 1921.8999999999999,
+      "swing_low": 1919.7,
+      "higher_high": true,
+      "higher_low": true,
+      "lower_high": false,
+      "lower_low": false,
+      "ema20_slope": 0.5761904761905043,
+      "price_ema20_distance": 0.002840733574035967
+    },
+    "market_structure": {
+      "trend": "UNKNOWN",
+      "support": null,
+      "resistance": null,
+      "rule_version": "forex-structure-2",
+      "evidence_category": "structure",
+      "break_confirmed_at": null,
+      "break_of_structure": null,
+      "change_of_character": false,
+      "last_high": null,
+      "last_low": null,
+      "confirmed_highs": 0,
+      "confirmed_lows": 0
+    },
+    "candlestick_patterns": {
+      "status": "UNAVAILABLE",
+      "reason": "private module not configured"
+    },
+    "chart_patterns": {
+      "status": "UNAVAILABLE",
+      "reason": "private module not configured"
+    },
+    "confluence": {
+      "status": "CONTEXT_ONLY",
+      "version": "forex-context-veto-1",
+      "independent_price_groups": 1,
+      "evidence": [
+        {
+          "source": "public_forex_v4",
+          "event_id": "primary-close:1799999100000",
+          "category": "trend",
+          "direction": "BUY",
+          "known_at": 1799999100.0,
+          "confirmed": true
+        }
+      ],
+      "rejected_events": [],
+      "conflicts": [],
+      "score": null,
+      "success_probability": null,
+      "extension_context": null
+    },
+    "confirmations": [
+      {
+        "timeframe": "H4",
+        "direction": "BUY",
+        "closed_at": 1799985600.0
+      }
+    ],
+    "strategy_candidates": [
+      {
+        "strategy": "trend_following",
+        "direction": "BUY",
+        "reason": "EMA alignment and RSI/MACD momentum"
+      },
+      {
+        "strategy": "breakout",
+        "direction": "BUY",
+        "reason": "close beyond preceding 20-bar range"
+      }
+    ],
+    "strategy_conflicts": [],
+    "final_decision": "BUY_CANDIDATE",
+    "legacy_signal": "BUY",
+    "decision_reasons": [
+      "trend=BUY",
+      "confirmations=BUY",
+      "trend_following: EMA alignment and RSI/MACD momentum",
+      "breakout: close beyond preceding 20-bar range"
+    ],
+    "entry_zone": {
+      "low": 1926.2,
+      "high": 1926.2,
+      "price_side": "ask"
+    },
+    "stop_loss": 1925.22,
+    "take_profit_1": 1928.16,
+    "take_profit_2": 1929.14,
+    "risk_reward": 2.0,
+    "lot_size": 1.02,
+    "risk_amount": 99.96,
+    "risk_policy": {
+      "decision": "PASS",
+      "reasons": [],
+      "fingerprint": "419fcf1f5144e49c",
+      "sizing": {
+        "lots": 1.02,
+        "estimated_risk": 99.96,
+        "unrounded_risk": 99.96000000000186,
+        "risk_cap": 100.0,
+        "currency": "USD"
+      },
+      "records_source": "caller_supplied_manual",
+      "daily_planned_risk": 0,
+      "daily_realized_loss": 0
+    },
+    "missing_capabilities": [
+      "margin_estimate",
+      "order_flow",
+      "private_v2_analysis",
+      "real_volume",
+      "verified_calendar",
+      "verified_swap",
+      "vwap"
+    ],
+    "warnings": [
+      "Analytical candidates only; no execution permission.",
+      "Real MT5 and market profitability remain unverified.",
+      "Private V2 unavailable; only the existing public Forex core was evaluated."
+    ],
+    "research_status": "UNVERIFIED_IN_MARKET",
+    "information": {
+      "schema_version": "forex-macro-1",
+      "data_status": "DATA_UNAVAILABLE",
+      "provider": null,
+      "events": [],
+      "event_filter_verified": false,
+      "directional_permission": false,
+      "reason": "verified macro source not configured"
+    }
+  },
+  "required_private_absent": {
+    "analysis_id": "79da84133d1467b789a4326e9c1db83b09d7821a90c9c03e588e036389f97dec",
+    "schema_version": "forex-analysis-5",
+    "engine_version": "forex-unified-5.1",
+    "source_versions": {
+      "public_core": "forex-unified-5.1",
+      "public_code_sha256": "7a4043d3af5155549676b3d380e90a52bb4a04893dc08c80491d7c67af2ef9e9",
+      "algorithms": {
+        "ema": "sma-seed-1",
+        "rsi14": "legacy-wilder-1",
+        "atr14": "legacy-true-range-sma-1",
+        "macd": "sma-seed-12-26-9-1",
+        "bollinger": "population-std20-2-1",
+        "strategies": "forex-v4-1",
+        "structure": "forex-structure-2"
+      }
+    },
+    "symbol": "XAUUSD",
+    "market_type": "unverified",
+    "contract_type": "unverified",
+    "broker_symbol": "XAUUSD",
+    "provider": "fixture-test-only",
+    "timeframe": "M15",
+    "as_of_utc": "2027-01-15T08:00:00+00:00",
+    "snapshot_id": "88fb6b15a2f25488a48ebb585fa15779951739c7f5db1d9fbca585bb66996ff6",
+    "market_status": "OPEN",
+    "data_status": "OK",
+    "trading_eligibility": "BLOCKED",
+    "integration_status": "PUBLIC_CORE_ONLY",
+    "private_extension": {
+      "status": "UNAVAILABLE",
+      "reason": "private extension not configured"
+    },
+    "trend": {
+      "ema20": 1921.4261904761902,
+      "ema50": 1919.646078431372,
+      "ema200": 1911.9997512437794,
+      "ema20_slope": 0.5761904761905043
+    },
+    "momentum": {
+      "rsi14": 100.0,
+      "macd": 1.0988603988605519,
+      "macd_histogram": 0.3190883190884053,
+      "momentum_change": 0.31908831908840507
+    },
+    "volatility": {
+      "atr14": 0.649999999999961,
+      "normalized_atr": 0.0003373293891743012,
+      "bollinger_width": 0.0029407551305071266
+    },
+    "indicators": {
+      "ema9": 1922.5,
+      "ema20": 1921.4261904761902,
+      "ema21": 1921.3545454545451,
+      "ema50": 1919.646078431372,
+      "ema100": 1917.049009900989,
+      "ema200": 1911.9997512437794,
+      "sma20": 1921.2,
+      "sma50": 1919.55,
+      "rsi14": 100.0,
+      "atr14": 0.649999999999961,
+      "normalized_atr": 0.0003373293891743012,
+      "macd": 1.0988603988605519,
+      "macd_signal": 0.7797720797721466,
+      "macd_histogram": 0.3190883190884053,
+      "momentum_change": 0.31908831908840507,
+      "bollinger_upper": 1924.0248893783653,
+      "bollinger_lower": 1918.3751106216348,
+      "bollinger_width": 0.0029407551305071266,
+      "swing_high": 1921.8999999999999,
+      "swing_low": 1919.7,
+      "higher_high": true,
+      "higher_low": true,
+      "lower_high": false,
+      "lower_low": false,
+      "ema20_slope": 0.5761904761905043,
+      "price_ema20_distance": 0.002840733574035967
+    },
+    "market_structure": {
+      "trend": "UNKNOWN",
+      "support": null,
+      "resistance": null,
+      "rule_version": "forex-structure-2",
+      "evidence_category": "structure",
+      "break_confirmed_at": null,
+      "break_of_structure": null,
+      "change_of_character": false,
+      "last_high": null,
+      "last_low": null,
+      "confirmed_highs": 0,
+      "confirmed_lows": 0
+    },
+    "candlestick_patterns": {
+      "status": "UNAVAILABLE",
+      "reason": "private module not configured"
+    },
+    "chart_patterns": {
+      "status": "UNAVAILABLE",
+      "reason": "private module not configured"
+    },
+    "confluence": {
+      "status": "CONTEXT_ONLY",
+      "version": "forex-context-veto-1",
+      "independent_price_groups": 1,
+      "evidence": [
+        {
+          "source": "public_forex_v4",
+          "event_id": "primary-close:1799999100000",
+          "category": "trend",
+          "direction": "BUY",
+          "known_at": 1799999100.0,
+          "confirmed": true
+        }
+      ],
+      "rejected_events": [],
+      "conflicts": [],
+      "score": null,
+      "success_probability": null,
+      "extension_context": null
+    },
+    "confirmations": [
+      {
+        "timeframe": "H4",
+        "direction": "BUY",
+        "closed_at": 1799985600.0
+      }
+    ],
+    "strategy_candidates": [
+      {
+        "strategy": "trend_following",
+        "direction": "BUY",
+        "reason": "EMA alignment and RSI/MACD momentum"
+      },
+      {
+        "strategy": "breakout",
+        "direction": "BUY",
+        "reason": "close beyond preceding 20-bar range"
+      }
+    ],
+    "strategy_conflicts": [],
+    "final_decision": "NO_TRADE",
+    "legacy_signal": "WAIT",
+    "decision_reasons": [
+      "trend=BUY",
+      "confirmations=BUY",
+      "trend_following: EMA alignment and RSI/MACD momentum",
+      "breakout: close beyond preceding 20-bar range",
+      "required complete private integration unavailable"
+    ],
+    "entry_zone": null,
+    "stop_loss": null,
+    "take_profit_1": null,
+    "take_profit_2": null,
+    "risk_reward": null,
+    "lot_size": null,
+    "risk_amount": null,
+    "risk_policy": null,
+    "missing_capabilities": [
+      "margin_estimate",
+      "order_flow",
+      "private_v2_analysis",
+      "real_volume",
+      "verified_calendar",
+      "verified_swap",
+      "vwap"
+    ],
+    "warnings": [
+      "Analytical candidates only; no execution permission.",
+      "Real MT5 and market profitability remain unverified.",
+      "Private V2 unavailable; only the existing public Forex core was evaluated."
+    ],
+    "research_status": "UNVERIFIED_IN_MARKET",
+    "information": {
+      "schema_version": "forex-macro-1",
+      "data_status": "DATA_UNAVAILABLE",
+      "provider": null,
+      "events": [],
+      "event_filter_verified": false,
+      "directional_permission": false,
+      "reason": "verified macro source not configured"
+    }
+  }
+}
