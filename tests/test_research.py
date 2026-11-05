@@ -80,3 +80,25 @@ class BootstrapDistribution(unittest.TestCase):
         self.assertLessEqual(a['median_total_r'],a['p95_total_r'])
         self.assertGreaterEqual(a['worst_drawdown_r'],a['median_drawdown_r'])
         self.assertEqual(a['sample_size'],6)
+
+class FoldIsolationV5(unittest.TestCase):
+    def test_fold_starts_flat_and_never_inherits_training_position(self):
+        from forex.research import walk_forward
+        result=walk_forward(series(300),.02,folds=2)
+        for fold in result['folds']:
+            isolated=strategy_backtest(series(300)[:fold['test_end_index']+1],.02,compare=False,
+                                        evaluation_start=fold['test_start_index'])
+            self.assertEqual(fold['trades'],isolated['trades'])
+            self.assertTrue(all(t['entry_index']>=fold['test_start_index'] for t in fold['trades']))
+
+    def test_unfinished_timestamp_and_provenance(self):
+        for field,value in (('time',True),('is_final',False)):
+            rows=series();rows[12][field]=value
+            with self.assertRaises(DataError): strategy_backtest(rows,.02)
+        result=strategy_backtest(series(),.02)
+        self.assertEqual(len(result['dataset_sha256']),64)
+        self.assertFalse(result['forward_validated'])
+        self.assertEqual(result['metrics']['equity_curve_r'][0],0)
+        self.assertAlmostEqual(result['metrics']['equity_curve_r'][-1],result['metrics']['total_r'])
+        self.assertIn('small empirical sample',result['monte_carlo']['warning'])
+        self.assertLessEqual(result['monte_carlo']['p5_drawdown_r'],result['monte_carlo']['p95_drawdown_r'])
