@@ -405,6 +405,17 @@ def early_cutoff(day, t, close_dt):
     return moved if moved.time() > OPEN else close_dt
 
 
+def closed_bar_breakout(closes, highs, lows):
+    """Direction of a close beyond the preceding range; caller supplies closed bars only."""
+    if len(closes) < 2 or len(closes) != len(highs) or len(closes) != len(lows):
+        return "WAIT"
+    if closes[-1] > max(highs[:-1]):
+        return "BUY"
+    if closes[-1] < min(lows[:-1]):
+        return "SELL"
+    return "WAIT"
+
+
 def evaluate(chart, now_utc, setup="orb", or_minutes=15, interval="5m", level=None,
              min_volume_x=None, cfg=None):
     """Pure function: the setup's status at now_utc from one session's bars."""

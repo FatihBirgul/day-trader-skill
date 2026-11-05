@@ -1,0 +1,21 @@
+# API sözleşmesi V1
+
+Base URL: `http://127.0.0.1:8000/api/v1`. OpenAPI: `/openapi.json`. Tüm zaman damgaları UTC ISO 8601 veya Unix saniyesidir. `provider` alanı `mt5` ya da açıkça test amaçlı `fixture-test-only` olabilir. `data_status`: `OK`, `STALE`, `DATA_UNAVAILABLE`, `ERROR`. Gerçek veri yokluğu `WAIT` sinyaline dönüştürülmez.
+
+| Rota | Parametre / gövde | Yanıt |
+| --- | --- | --- |
+| GET `/health` | Yok | `status`, `provider`, `timestamp` |
+| GET `/symbols` | Yok | `symbols`, `provider`, `data_status` |
+| GET `/symbols/{symbol}/metadata` | destekli sembol | `data` (contract, tick, point, volume, stops), `provider`, `data_status` |
+| GET `/quotes/{symbol}` | sembol | `data` (bid, ask, time), `provider`, `data_status` |
+| GET `/candles/{symbol}` | `timeframe=M15`, `count=220` (1..10000) | `data` (UTC open time, OHLC, tick_volume), `provider`, `data_status` |
+| GET `/analysis/{symbol}` | `timeframe=M15` | `signal`, `plan`, `indicators`, `reasons`, `data_status`, `provider`, `timestamp` |
+| GET `/signals/{symbol}` | analysis ile aynı | analysis ile aynı |
+| POST `/risk/calculate` | `symbol`, `direction`, `balance`, `risk_pct`, `entry`, `stop_loss`, `account_currency` | `lots`, `estimated_risk`, `risk_cap`, `currency` |
+| GET `/news` | Yok | `items=[]`, `data_status=DATA_UNAVAILABLE` |
+| GET `/calendar` | Yok | `events=[]`, `data_status=DATA_UNAVAILABLE` |
+| POST `/backtests` | `symbol`, `timeframe`, `direction`, `entry`, `stop_loss`, `take_profit`, `spread`, `count` (2..10000) | `result` (`trades`, `outcomes_r`, `max_drawdown_r`, `policy`), `provider`, `data_status` |
+
+Örnek: `GET /api/v1/analysis/XAUUSD?timeframe=M15` için veri yoksa `{"symbol":"XAUUSD","signal":"WAIT","plan":null,"data_status":"DATA_UNAVAILABLE","reasons":["quote or metadata unavailable"],"provider":"mt5",...}`. Veri varsa BUY/SELL planında `entry`, `stop_loss`, `take_profit_1`, `take_profit_2`, `risk_reward`, `timestamp` bulunur. Plan oluşmuyorsa `WAIT` döner. `POST /risk/calculate` örnek gövde: `{"symbol":"XAUUSD","direction":"BUY","balance":10000,"risk_pct":1,"entry":2000,"stop_loss":1999,"account_currency":"USD"}`.
+
+HTTP 422 geçersiz girdi veya broker veri hatası; 404 provider'da bulunmayan sembol; 503 MT5 paketi/terminal erişilemez. FastAPI Pydantic hataları standart `detail` dizisi kullanır. Veri hataları `detail.status` ve `detail.reason` döndürür. Bu sözleşme ilk sürümdür; PWA, `data_status=OK` dışında fiyatı canlı göstermemelidir.
