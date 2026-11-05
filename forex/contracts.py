@@ -14,6 +14,16 @@ def canonical(value):
     return json.dumps(value, sort_keys=True, separators=(',', ':'), allow_nan=False)
 
 
+def provider_read(provider, method, *args):
+    """Normalize optional provider failures without exposing arbitrary exception text."""
+    try:
+        return getattr(provider, method)(*args)
+    except DataError:
+        raise
+    except Exception as exc:
+        raise DataError('provider unavailable: '+method) from exc
+
+
 @dataclass(frozen=True)
 class Snapshot:
     """Serialized ownership prevents nested mutable aliases crossing engine boundaries."""
@@ -92,7 +102,7 @@ def capture(provider, symbol, timeframe, as_of, confirmations=('H4',)):
         raise DataError('confirmation timeframe must be equal or higher')
     as_of = finite(as_of, 'as of')
     # Providers remain the only I/O boundary. Each resource is read once.
-    meta, quote = provider.metadata(symbol), provider.quote(symbol)
+    meta, quote = provider_read(provider,'metadata',symbol), provider_read(provider,'quote',symbol)
     if not isinstance(meta, dict) or not isinstance(quote, dict):
         raise DataError('quote or metadata unavailable')
     if meta.get('symbol', symbol) != symbol or quote.get('symbol', symbol) != symbol:
@@ -105,13 +115,13 @@ def capture(provider, symbol, timeframe, as_of, confirmations=('H4',)):
     if as_of - quote_time > 120 or quote_time > as_of + 5:
         raise DataError('stale tick')
     quote = {**quote, 'bid': bid, 'ask': ask, 'time': quote_time}
-    primary = _bars(provider.candles(symbol, timeframe, 256), timeframe, as_of, meta, symbol, provider.name)
+    primary = _bars(provider_read(provider,'candles',symbol,timeframe,256), timeframe, as_of, meta, symbol, provider.name)
     primary_close = primary[-1]['close_time_utc']
     frames = {timeframe: primary}
     for tf in confirmations:
         if tf == timeframe:
             continue
-        rows = provider.candles(symbol, tf, 256)
+        rows = provider_read(provider,'candles',symbol,tf,256)
         if not isinstance(rows, (list, tuple)) or len(rows)>256:
             raise DataError('invalid confirmation candle batch')
         # Higher frames are intentionally viewed at the primary decision close.

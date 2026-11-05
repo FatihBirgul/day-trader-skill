@@ -14,6 +14,8 @@ app=FastAPI(title='Trade AI Forex',version='0.2.0')
 app.state.provider=None
 app.state.news_items=None
 app.state.calendar_events=None
+app.state.analytical_extension=None
+app.state.information_provider=None
 
 def provider():
     if app.state.provider is None:
@@ -212,3 +214,41 @@ def walk_forward_route(req:WalkForwardRequest):
         req.spread,folds=req.folds,commission=req.commission,slippage=req.slippage,
         holdout=req.holdout,seed=req.seed,price_basis=req.price_basis))
     return {'result':result,'provider':p.name,'data_status':'OK'}
+
+
+# Additive V5 contract; existing V1 routes and response meanings are retained.
+from .unified import UnifiedAnalysis, unified_analyze
+
+
+class UnifiedRequest(BaseModel):
+    model_config = {'extra': 'forbid', 'allow_inf_nan': False}
+    symbol: Literal['XAUUSD','EURUSD','GBPUSD','USDJPY']
+    timeframe: Literal['M5','M15','M30','H1','H4','D1']='M15'
+    confirmations: list[Literal['M5','M15','M30','H1','H4','D1']] = Field(default_factory=lambda: ['H4'], min_length=1, max_length=3)
+    require_private: bool = False
+    balance: float | None = Field(default=None, gt=0)
+    risk_pct: float = Field(default=1, gt=0, le=5)
+    commission_per_lot: float = Field(default=0, ge=0)
+    slippage_price: float = Field(default=0, ge=0)
+    records: list[dict] = Field(default_factory=list, max_length=100)
+
+
+@app.post('/api/v5/analysis', response_model=UnifiedAnalysis)
+def unified_analysis_route(req: UnifiedRequest):
+    """Analytical POST has no persistent or broker execution side effects."""
+    from .contracts import canonical
+    if len(canonical(req.records)) > 100_000:
+        raise HTTPException(422, {'status':'ERROR','reason':'manual records exceed budget'})
+    return unified_analyze(provider(), req.symbol, req.timeframe,
+                           confirmations=tuple(req.confirmations),
+                           extension=app.state.analytical_extension,
+                           require_private=req.require_private, balance=req.balance,
+                           risk_pct=req.risk_pct, records=req.records,
+                           commission_per_lot=req.commission_per_lot, slippage_price=req.slippage_price,
+                           information_provider=app.state.information_provider)
+
+
+@app.get('/api/v5/information')
+def unified_information_route():
+    from .macro import information_context
+    return information_context(app.state.information_provider)
