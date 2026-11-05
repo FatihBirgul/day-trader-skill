@@ -35,3 +35,5 @@ Tek işlem tekrar oynatma yanıtında `result.status` değeri `STOP`, `TARGET` v
 V3 yeni rotalar: `POST /api/v1/risk/policy` plan ve manuel günlük kayıtlarla `decision`, `reasons`, `fingerprint`, `sizing`, `records_source` döndürür. `GET /api/v1/alerts/{symbol}` backend uyarı olaylarını listeler. `/news` ve `/calendar` yalnızca uygulamaya açıkça veri sağlayıcı eklendiğinde `OK` döner; varsayılan `DATA_UNAVAILABLE` korunur. Takvim `symbol` filtresi alır. Harici haber/takvim kaynağı varsayılan olarak yapılandırılmamıştır.
 
 V3 MT5 yapılandırması: `/symbols/{symbol}/metadata` artık `asset_type`, `source`, `digits`, `freeze_level`, `max_spread`, `broker_hours` gibi alanları döndürebilir. `max_spread` ve broker saat politikası eksikse `/analysis` plan üretmez. `/quotes` `spread`, `provider`, `freshness` alanlarını içerir. Bu alanlar brokerdan doğrulanan veriyle doldurulur; fixture sonuçları canlı gösterilmemelidir.
+
+`/strategy-backtests` yanıtı ayrıca `strategy_comparison` döndürür. Etiketler örtüşebilir; alt grup işlem sayıları toplamının genel işlem sayısına eşit olması beklenmez.

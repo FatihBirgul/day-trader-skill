@@ -19,3 +19,5 @@ V3 metadata aşaması: 356 test geçti. Yanlış sembol eşlemesi ve eksik sprea
 V3 son yerel doğrulama: 357 test geçti, 0 başarısız ve 0 atlanan. Gösterge hesabı yaklaşık 0,029 saniye, 2000 mumluk araştırma backtest'i yaklaşık 0,321 saniye, fixture tarama yaklaşık 0,002 saniye sürdü; bu ölçümler tek Cloud örneğinde yapıldı ve MT5 ağ/terminal gecikmesini kapsamaz. CI artık Python 3.10 ve 3.12 için offline test, bağımlılık kurulumu ve compileall çalıştırır.
 
 V3 MT5 tanılama aşaması: 358 test geçti. Tanılama mock provider ile test edildi; Cloud'da gerçek MT5 paketi olmadığından canlı test yapılmadı.
+
+V3 strateji etiket karşılaştırması sonrası 359 test geçti.

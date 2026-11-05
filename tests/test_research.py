@@ -48,3 +48,9 @@ class GapPolicy(unittest.TestCase):
             bars[201].update(open=50,high=51,low=49,close=50)
             result=research.strategy_backtest(bars,.02)
         self.assertLess(result['trades'][0]['r'],-1)
+
+class StrategyComparison(unittest.TestCase):
+    def test_comparison_counts_tags(self):
+        result=strategy_backtest(series(),.02)
+        for name,metrics in result['strategy_comparison'].items():
+            self.assertEqual(metrics['trade_count'],sum(name in t['strategy'] for t in result['trades']))

@@ -56,7 +56,10 @@ def strategy_backtest(bars, spread, commission=0, slippage=0, holdout=0.25, seed
     return {'trades':trades,'open_position':position,'metrics':_metrics(trades,exposure,n-200),
             'development':_metrics([t for t in trades if t['split']=='development'],0,0),
             'holdout':_metrics([t for t in trades if t['split']=='holdout'],0,0),
-            'holdout_start_time':bars[split]['time'],'monte_carlo':_bootstrap(trades,seed),
+            'holdout_start_time':bars[split]['time'],
+            'strategy_comparison':{name:_metrics([t for t in trades if name in t['strategy']],0,0)
+                                   for name in ('trend_following','breakout','pullback')},
+            'monte_carlo':_bootstrap(trades,seed),
             'policy':'stop_first','entry_assumption':'next_bar_open','seed':seed}
 
 def _metrics(trades,exposure,bars):
