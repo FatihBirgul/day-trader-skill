@@ -249,3 +249,20 @@ class ProviderReliability(unittest.TestCase):
         with ThreadPoolExecutor(max_workers=4) as pool:
             list(pool.map(p.quote,['XAUUSD']*8))
         self.assertEqual(mt.high,1)
+
+class ConfirmationAlignment(unittest.TestCase):
+    def test_upper_future_bar_is_excluded(self):
+        p=fixture()
+        upper=p.data['XAUUSD']['candles']['H4']
+        upper.append({'time':NOW+100,'open':1,'high':2,'low':.5,'close':1})
+        result=analyze(p,'XAUUSD',now=NOW)
+        self.assertEqual(result['signal'],'BUY')
+        self.assertLessEqual(result['confirmations'][0]['closed_at'],
+                             p.data['XAUUSD']['candles']['M15'][-1]['time']+900)
+    def test_multiple_confirmations_and_bad_lower_tf(self):
+        p=fixture();p.data['XAUUSD']['candles']['H1']=[{**b,'time':NOW-221*3600+i*3600}
+                              for i,b in enumerate(p.data['XAUUSD']['candles']['H4'])]
+        result=analyze(p,'XAUUSD',now=NOW,confirmation_timeframes=('H1','H4'))
+        self.assertEqual(len(result['confirmations']),2)
+        bad=analyze(p,'XAUUSD','H4',now=NOW,confirmation_timeframes=('M15',))
+        self.assertEqual(bad['data_status'],'DATA_UNAVAILABLE')

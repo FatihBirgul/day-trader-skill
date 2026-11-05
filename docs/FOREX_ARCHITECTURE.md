@@ -15,3 +15,5 @@ V3 seans katmanı `forex/sessions.py` içindedir. Broker saati bilinmediğinde `
 V3 araştırma backtest'i `forex/research.py` içinde tek işlem replay'inden ayrıdır. Kapanmış mumlarla sinyal, sonraki mum açılışıyla giriş, stop-first çıkış ve kronolojik holdout kullanır. 2000 mum sınırı uygulanır.
 
 Göstergeler: EMA ilk N kapanışın basit ortalamasıyla başlar ve 2/(N+1) katsayısıyla devam eder. MACD 12 ve 26 EMA farkıdır; sinyal aynı başlangıç yöntemiyle MACD'nin 9 EMA'sıdır. RSI mevcut scanner'daki Wilder ortalamasını kullanır; sabit seride 50 döner. ATR mevcut exit Skill'in son 14 true-range basit ortalamasıdır; Wilder ATR değildir. Bollinger 20 kapanışın popülasyon standart sapmasıyla 2 sigma sınırlarıdır. Yetersiz 200 mumda gösterge üretimi reddedilir.
+
+V4 çoklu zaman hizalaması: onay mumları birincil son mumun kapanış zamanında kesilir. Gelecekte kapanacak üst mum kullanılmaz. Aynı zaman dilimi yinelenirse gösterge hesabı tekrar yapılmaz; en fazla üç benzersiz onay zaman dilimi desteklenir.

@@ -31,3 +31,5 @@ V4 bağımsız strateji tekrar oynatma sonrası 368 test geçti. `strategy_compa
 V4 risk sınırı aşaması: 370 test geçti. Negatif manuel kayıt ve spread sonrası broker stop mesafesi regresyonları eklendi.
 
 V4 provider aşaması: 373 test geçti. Kütüphane hatası, fixture veri yalıtımı ve paralel quote serileştirmesi test edildi.
+
+V4 as-of aşaması: 375 test geçti. Gelecekteki H4 mumunun atılması, çoklu onay ve daha düşük zaman dilimi reddi test edildi.

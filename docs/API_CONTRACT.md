@@ -43,3 +43,5 @@ V3 MT5 yapılandırması: `/symbols/{symbol}/metadata` artık `asset_type`, `sou
 V4 geriye uyumlu ek alan: `/backtests`, `/strategy-backtests` ve `/walk-forward` isteklerinde `price_basis` `bid` veya `mid` olabilir; alan yoksa `bid` kullanılır. Gönderilen entry/stop/target ve OHLC aynı grafik fiyat temelinde olmalıdır. Bilinmeyen temel 422 döndürür. `result.price_basis` ve `spread_assumption` hesap varsayımını açıklar.
 
 V4 karşılaştırma gövdesi: `strategy_comparison.{trend_following|breakout|pullback}` artık her stratejinin bağımsız `metrics` ve `trades` alanını içerir. Önceki sürümde alt alan doğrudan metrikti; PWA `strategy_comparison[name].metrics` yoluna geçmelidir.
+
+V4 zaman hizalaması: `/analysis/{symbol}` ve `/signals/{symbol}` `confirmations=H1,H4` sorgusu alabilir. Her üst zaman dilimi mumu birincil son kapanıştan önce kapanmış olmalıdır. Yanıtta `confirmations` öğeleri `timeframe`, `direction` ve Unix saniye `closed_at` alanlarını taşır; `strategies` ve `session` alanları da pozitif yanıtta korunur. Geçersiz veya daha düşük onay zaman dilimi veri durumu hatası döndürür.

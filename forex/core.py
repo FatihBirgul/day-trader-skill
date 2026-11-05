@@ -178,7 +178,7 @@ def risk_check(plan, meta, max_spread, min_rr=1.5, max_open_positions=1, open_po
         reasons.append(str(exc))
     return {'decision':'BLOCK' if reasons else 'PASS','reasons':reasons}
 
-def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=None):
+def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=None, confirmation_timeframes=None):
     if symbol not in SYMBOLS: raise DataError('unsupported symbol')
     if timeframe not in TIMEFRAMES: raise DataError('invalid timeframe')
     now = now or datetime.now(timezone.utc).timestamp()
@@ -206,20 +206,36 @@ def analyze(provider, symbol, timeframe='M15', balance=None, risk_pct=1.0, now=N
         bars=provider.candles(symbol,timeframe,220)
         last=validate_bars(bars,timeframe,now)
         if now-last-TIMEFRAMES[timeframe] > TIMEFRAMES[timeframe]*2: raise DataError('stale candles')
-        upper=provider.candles(symbol,'H4',220) if timeframe!='H4' else bars
-        upper_last=validate_bars(upper,'H4',now)
-        if now-upper_last-TIMEFRAMES['H4'] > TIMEFRAMES['H4']*2: raise DataError('stale H4 candles')
+        primary_close=last+TIMEFRAMES[timeframe]
         a=indicators(bars)
-        b=a if timeframe=='H4' else indicators(upper)
         close=bars[-1]['close']
         trend='BUY' if close>a['ema20']>a['ema50']>a['ema200'] else 'SELL' if close<a['ema20']<a['ema50']<a['ema200'] else 'WAIT'
-        higher='BUY' if upper[-1]['close']>b['ema50']>b['ema200'] else 'SELL' if upper[-1]['close']<b['ema50']<b['ema200'] else 'WAIT'
+        confirmations=[]
+        confirm=confirmation_timeframes if confirmation_timeframes is not None else ('H4',)
+        if not confirm or len(confirm)>3 or len(set(confirm))!=len(confirm):
+            raise DataError('invalid confirmation timeframes')
+        for tf in confirm:
+            if tf not in TIMEFRAMES or TIMEFRAMES[tf]<TIMEFRAMES[timeframe]:
+                raise DataError('confirmation timeframe must be equal or higher')
+            upper=bars if tf==timeframe else provider.candles(symbol,tf,220)
+            upper=[b for b in upper if b['time']+TIMEFRAMES[tf]<=primary_close]
+            upper_last=validate_bars(upper,tf,primary_close)
+            if primary_close-upper_last-TIMEFRAMES[tf]>TIMEFRAMES[tf]*2:
+                raise DataError('stale '+tf+' candles')
+            b=a if tf==timeframe else indicators(upper)
+            c=upper[-1]['close']
+            direction='BUY' if c>b['ema50']>b['ema200'] else 'SELL' if c<b['ema50']<b['ema200'] else 'WAIT'
+            confirmations.append({'timeframe':tf,'direction':direction,
+                                  'closed_at':upper_last+TIMEFRAMES[tf]})
+        directions={item['direction'] for item in confirmations}
+        higher=next(iter(directions)) if len(directions)==1 else 'WAIT'
+        base['confirmations']=confirmations
         from .strategies import candidates, resolve
         votes=candidates(bars,a)
         decision,why=resolve(votes,higher)
         base['indicators']=a
         base['strategies']=votes
-        base['reasons']=[f'trend={trend}',f'H4={higher}']+why
+        base['reasons']=[f'trend={trend}',f'confirmations={higher}']+why
         if decision!='WAIT':
             tick=finite(meta.get('tick_size'),'tick_size')
             point=finite(meta.get('point'),'point')

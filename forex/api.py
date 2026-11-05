@@ -39,6 +39,9 @@ class AnalysisResponse(BaseModel):
     reasons: list[str]
     data_status: str
     indicators: dict | None = None
+    strategies: list[dict] | None = None
+    session: dict | None = None
+    confirmations: list[dict] | None = None
 
 class BacktestResponse(BaseModel):
     result: dict
@@ -93,13 +96,14 @@ def candles(symbol:Literal['XAUUSD','EURUSD','GBPUSD','USDJPY'],timeframe:Litera
     return call(lambda: {'data':provider().candles(symbol,timeframe,count),'provider':provider().name,'data_status':'OK'})
 
 @app.get('/api/v1/analysis/{symbol}', response_model=AnalysisResponse)
-def analysis(symbol:Literal['XAUUSD','EURUSD','GBPUSD','USDJPY'],timeframe:Literal['M5','M15','M30','H1','H4','D1']='M15'):
-    result=call(lambda: analyze(provider(),symbol,timeframe))
+def analysis(symbol:Literal['XAUUSD','EURUSD','GBPUSD','USDJPY'],timeframe:Literal['M5','M15','M30','H1','H4','D1']='M15', confirmations:str|None=None):
+    confirm=tuple(x.strip().upper() for x in confirmations.split(',')) if confirmations else None
+    result=call(lambda: analyze(provider(),symbol,timeframe,confirmation_timeframes=confirm))
     if result['data_status']!='OK': return JSONResponse(status_code=503,content=result)
     return result
 
 @app.get('/api/v1/signals/{symbol}', response_model=AnalysisResponse)
-def signals(symbol:Literal['XAUUSD','EURUSD','GBPUSD','USDJPY'],timeframe:Literal['M5','M15','M30','H1','H4','D1']='M15'): return analysis(symbol,timeframe)
+def signals(symbol:Literal['XAUUSD','EURUSD','GBPUSD','USDJPY'],timeframe:Literal['M5','M15','M30','H1','H4','D1']='M15',confirmations:str|None=None): return analysis(symbol,timeframe,confirmations)
 
 @app.post('/api/v1/risk/calculate', response_model=RiskResponse)
 def calculate(req:RiskRequest):
